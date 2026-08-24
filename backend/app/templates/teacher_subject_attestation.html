@@ -1,0 +1,216 @@
+{% extends "teacher_base.html" %}
+
+{% block title %}Аттестация — {{ subject.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="/teacher/subjects" class="back-link">
+            <i class="fas fa-arrow-left"></i> Назад к дисциплинам
+        </a>
+        <h1><i class="fas fa-graduation-cap"></i> Аттестация: {{ subject.name }}</h1>
+    </div>
+</div>
+
+<div class="info-grid">
+    <div class="info-card">
+        <div class="info-label">Вид аттестации</div>
+        <div class="info-value">{{ summary.attestation_label }}</div>
+    </div>
+    <div class="info-card">
+        <div class="info-label">Активных заданий</div>
+        <div class="info-value">{{ summary.assignments_count }}</div>
+    </div>
+    <div class="info-card">
+        <div class="info-label">Студентов</div>
+        <div class="info-value">{{ summary.students_count }}</div>
+    </div>
+    <div class="info-card">
+        <div class="info-label">Групп</div>
+        <div class="info-value">{{ summary.groups|length if summary.groups else 0 }}</div>
+    </div>
+    <div class="info-card">
+        <div class="info-label">Прогноз оценки</div>
+        <div class="info-value">
+            {% if summary.predicts_grade %}
+            <span class="text-success">включён (2–5)</span>
+            {% else %}
+            <span class="text-muted">не строится</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-card alert-card alert-info mb-2">
+    <p class="hint-box">
+        <i class="fas fa-info-circle"></i>
+        Прогноз виден <strong>только преподавателю</strong>. Учитываются: сданные ДЗ, выставленные оценки,
+        сдача в срок / с опозданием. Это ориентир, не итоговая оценка в ведомости.
+        {% if not summary.predicts_grade %}
+        <br>Числовой прогноз — для «Экзамен» / «Дифзачёт»
+        (<a href="/teacher/subjects/{{ subject.id }}/edit">настройки дисциплины</a>).
+        {% endif %}
+    </p>
+</div>
+
+{% if not summary.groups %}
+<div class="dashboard-card">
+    <div class="empty-state">
+        <i class="fas fa-users"></i>
+        <p class="empty-state-title">Нет студентов по дисциплине</p>
+        <p class="empty-state-hint">Привяжите группы к дисциплине или добавьте студентов в группы</p>
+    </div>
+</div>
+{% else %}
+
+{% if summary.groups|length > 1 %}
+<div class="toolbar-row">
+    <div class="toolbar-actions">
+        <button type="button" class="btn-secondary btn-small" onclick="downloadAllAttestationCsv()">
+            <i class="fas fa-download"></i> CSV (все группы)
+        </button>
+        <button type="button" class="btn-secondary btn-small" onclick="expandAllGroups(true)">
+            <i class="fas fa-folder-open"></i> Развернуть все
+        </button>
+        <button type="button" class="btn-secondary btn-small" onclick="expandAllGroups(false)">
+            <i class="fas fa-folder"></i> Свернуть все
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<div class="materials-accordion" id="attestation-accordion">
+{% for g in summary.groups %}
+    {% set open = (summary.groups|length == 1) %}
+    <div class="accordion-item {% if open %}open{% endif %}" data-group-index="{{ loop.index }}">
+        <div class="accordion-header" role="button" tabindex="0"
+             onclick="toggleAccItem(this.closest('.accordion-item'))"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleAccItem(this.closest('.accordion-item'));}">
+            <div class="accordion-title">
+                <i class="fas fa-users"></i>
+                <span>{{ g.group_name }}</span>
+                <span class="accordion-count">{{ g.students_count }}</span>
+            </div>
+            <div class="toolbar-actions" onclick="event.stopPropagation()">
+                <button type="button" class="btn-secondary btn-small"
+                        onclick="downloadTableCsv('attestation-table-{{ loop.index }}', 'attestation_{{ subject.id }}_{{ g.group_name|replace(' ', '_') }}.csv')">
+                    <i class="fas fa-download"></i> CSV
+                </button>
+                <button type="button" class="btn-secondary btn-small"
+                        onclick="printSection('attestation-body-{{ loop.index }}')">
+                    <i class="fas fa-print"></i> Печать
+                </button>
+                <i class="fas fa-chevron-down accordion-icon"></i>
+            </div>
+        </div>
+        <div class="accordion-body">
+            <div class="data-table-wrapper" id="attestation-body-{{ loop.index }}">
+                <table class="data-table" id="attestation-table-{{ loop.index }}">
+                    <thead>
+                        <tr>
+                            <th>Студент</th>
+                            <th>Сдано</th>
+                            <th>Оценено</th>
+                            <th>Ср. балл ДЗ</th>
+                            <th>Вовремя</th>
+                            <th>Прогноз</th>
+                            <th>Пояснение</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in g.students %}
+                        <tr>
+                            <td>{{ s.student_name }}</td>
+                            <td>{{ s.submitted_count }}/{{ s.total_assignments }}</td>
+                            <td>{{ s.graded_count }}</td>
+                            <td>{% if s.avg_grade is not none %}{{ "%.1f"|format(s.avg_grade) }}{% else %}—{% endif %}</td>
+                            <td>{% if s.submitted_count %}{{ s.on_time_count }}/{{ s.submitted_count }}{% else %}—{% endif %}</td>
+                            <td>
+                                {% if s.predicted_grade is not none %}
+                                <span class="badge badge-graded">{{ s.predicted_grade }}</span>
+                                {% else %}—{% endif %}
+                            </td>
+                            <td class="cell-note">{{ s.explanation }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endfor %}
+</div>
+{% endif %}
+
+<script>
+function toggleAccItem(item) {
+    if (!item) return;
+    item.classList.toggle('open');
+}
+function expandAllGroups(open) {
+    document.querySelectorAll('#attestation-accordion .accordion-item').forEach(item => {
+        item.classList.toggle('open', open);
+    });
+}
+function downloadTableCsv(tableId, filename) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const rows = [];
+    table.querySelectorAll('tr').forEach(tr => {
+        const cells = [...tr.querySelectorAll('th,td')].map(td => {
+            let t = (td.innerText || '').replace(/\s+/g, ' ').trim();
+            if (t.includes(',') || t.includes('"') || t.includes('\n')) {
+                t = '"' + t.replace(/"/g, '""') + '"';
+            }
+            return t;
+        });
+        rows.push(cells.join(','));
+    });
+    const blob = new Blob(['\uFEFF' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename || 'export.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+function downloadAllAttestationCsv() {
+    const tables = document.querySelectorAll('[id^="attestation-table-"]');
+    const rows = [];
+    let headerDone = false;
+    tables.forEach((table, idx) => {
+        const item = table.closest('.accordion-item');
+        const title = item ? (item.querySelector('.accordion-title span')?.textContent || '').trim() : '';
+        table.querySelectorAll('tr').forEach((tr, ri) => {
+            if (ri === 0 && headerDone) return;
+            if (ri === 0) headerDone = true;
+            const cells = [...tr.querySelectorAll('th,td')].map(td => {
+                let t = (td.innerText || '').replace(/\s+/g, ' ').trim();
+                if (t.includes(',') || t.includes('"')) t = '"' + t.replace(/"/g, '""') + '"';
+                return t;
+            });
+            if (ri === 0 && idx === 0) rows.push(['Группа', ...cells].join(','));
+            else if (ri > 0) {
+                let g = title;
+                if (g.includes(',')) g = '"' + g + '"';
+                rows.push([g, ...cells].join(','));
+            }
+        });
+    });
+    const blob = new Blob(['\uFEFF' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'attestation_{{ subject.id }}_all_groups.csv';
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+function printSection(id) {
+    /* Печать текущего вида страницы с тёмной темой (без белого фона) */
+    const el = document.getElementById(id);
+    if (el) {
+        const item = el.closest('.accordion-item');
+        if (item) item.classList.add('open');
+    }
+    window.print();
+}
+</script>
+{% endblock %}

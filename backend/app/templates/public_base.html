@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru" class="page-wrapper">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NovaLab{% endblock %}</title>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="/static/favicon.png" type="image/png" sizes="32x32">
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    {% block head %}{% endblock %}
+    <script src="/static/modal.js" defer></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo" title="NovaLab">
+                <img src="/static/logo.svg" alt="NovaLab" class="logo-img">
+            </a>
+            {% block nav_extra %}{% endblock %}
+        </div>
+    </nav>
+    <main class="main-content {% block main_class %}{% endblock %}">
+        {% block content %}{% endblock %}
+    </main>
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 NovaLab</p>
+        </div>
+    </footer>
+</body>
+</html>

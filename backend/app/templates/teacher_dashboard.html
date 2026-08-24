@@ -1,0 +1,99 @@
+{% extends "teacher_base.html" %}
+
+{% block title %}Панель преподавателя{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-chart-pie"></i> Панель преподавателя</h1>
+    {% if teacher %}
+    <p class="page-user-name">{{ teacher.full_name }}</p>
+    {% elif request.session.get('full_name') %}
+    <p class="page-user-name">{{ request.session.get('full_name') }}</p>
+    {% endif %}
+    <p class="page-subtitle">Управление группами, заданиями и оценками</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number">{{ total_students }}</div>
+        <div class="stat-label"><i class="fas fa-user-graduate"></i> Всего студентов</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ total_submissions }}</div>
+        <div class="stat-label"><i class="fas fa-file-upload"></i> Сданных работ</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ graded_submissions }}</div>
+        <div class="stat-label"><i class="fas fa-check-circle"></i> Оценено</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ pending_review|default(0) }}</div>
+        <div class="stat-label"><i class="fas fa-hourglass-half"></i> На проверке</div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="dashboard-card">
+        <h3><i class="fas fa-clock"></i> Последние работы</h3>
+        {% if recent_submissions %}
+        <ul class="recent-list">
+            {% for item in recent_submissions %}
+            <li class="recent-item">
+                <a href="/teacher/submission/{{ item.id }}/view" class="recent-link">
+                    <span class="recent-title">{{ item.assignment_title }}</span>
+                    <span class="recent-meta">{{ item.student_name }}
+                        {% if item.submitted_at %}
+                        · {{ item.submitted_at|format_dt }}
+                        {% endif %}
+                    </span>
+                </a>
+                {% if item.grade is not none %}
+                <span class="badge-grade">{{ item.grade }}</span>
+                {% else %}
+                <span class="badge-pending">на проверке</span>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state empty-state--compact">
+            <i class="fas fa-inbox"></i>
+            <p class="empty-state-title">Пока нет сданных работ</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="dashboard-card">
+        <h3><i class="fas fa-chart-line"></i> Активность по группам</h3>
+        {% if group_activity %}
+        <ul class="recent-list">
+            {% for g in group_activity %}
+            <li class="recent-item">
+                <span class="recent-title">{{ g.name }}</span>
+                <span class="recent-meta">{{ g.students }} студ. · {{ g.submissions }} работ</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state empty-state--compact">
+            <i class="fas fa-chart-bar"></i>
+            <p class="empty-state-title">Нет групп</p>
+            <p class="empty-state-hint">Создайте группу в разделе «Группы»</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="grid-2">
+    <a href="/teacher/groups" class="dashboard-card nav-card">
+        <div class="nav-icon"><i class="fas fa-users"></i></div>
+        <div class="nav-title">Группы</div>
+        <div class="nav-desc">Управление группами и студентами</div>
+    </a>
+    <a href="/teacher/assignments" class="dashboard-card nav-card">
+        <div class="nav-icon"><i class="fas fa-tasks"></i></div>
+        <div class="nav-title">Задания</div>
+        <div class="nav-desc">Просмотр всех заданий и работ</div>
+    </a>
+</div>
+{% endblock %}

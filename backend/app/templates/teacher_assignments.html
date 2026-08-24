@@ -1,0 +1,111 @@
+{% extends "teacher_base.html" %}
+
+{% block title %}Управление заданиями{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-tasks"></i> Управление заданиями</h1>
+    <a href="/teacher/assignments/create" class="btn-primary">
+        <i class="fas fa-plus"></i> Создать задание
+    </a>
+</div>
+
+{% if assignments|length == 0 %}
+<div class="dashboard-card">
+    <div class="empty-state">
+        <i class="fas fa-tasks"></i>
+        <p class="empty-state-title">Заданий пока нет</p>
+        <p class="empty-state-hint">Создайте задание кнопкой выше</p>
+    </div>
+</div>
+{% else %}
+<div class="assignments-accordion">
+    {% for group in assignments_by_subject %}
+    <div class="accordion-item {% if loop.first %}open{% endif %}">
+        <div class="accordion-header" onclick="toggleAssignmentAccordion(this)">
+            <div class="accordion-title">
+                <i class="fas fa-book"></i>
+                <span>{{ group.subject_name }}</span>
+                <span class="accordion-count">{{ group.assignments|length }}</span>
+            </div>
+            <i class="fas fa-chevron-down accordion-icon"></i>
+        </div>
+        <div class="accordion-body">
+            <div class="assignment-rows">
+                {% for assignment in group.assignments %}
+                <div class="assignment-row">
+                    <div class="assignment-row-main">
+                        <a href="/teacher/assignment/{{ assignment.id }}/submissions" class="assignment-row-title">
+                            {{ assignment.title }}
+                        </a>
+                        <div class="assignment-row-meta">
+                            {% if assignment.deadline %}
+                            <span class="ar-meta ar-deadline" title="Дедлайн">
+                                <i class="fas fa-calendar-alt"></i>
+                                {{ assignment.deadline.strftime('%d.%m.%Y') }}
+                            </span>
+                            {% endif %}
+                            <span class="ar-meta" title="Сдано работ">
+                                <i class="fas fa-file-upload"></i> {{ assignment.submissions_count }}
+                            </span>
+                            <span class="ar-meta ar-graded" title="Оценено">
+                                <i class="fas fa-check-circle"></i> {{ assignment.graded_count }}
+                            </span>
+                            {% if assignment.files_count %}
+                            <span class="ar-meta" title="Файлы"><i class="fas fa-paperclip"></i> {{ assignment.files_count }}</span>
+                            {% endif %}
+                            {% set pending = assignment.submissions_count - assignment.graded_count %}
+                            {% if pending > 0 %}
+                            <span class="ar-meta ar-pending" title="На проверке">
+                                <i class="fas fa-hourglass-half"></i> {{ pending }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="assignment-row-actions">
+                        <a href="/teacher/assignment/{{ assignment.id }}/submissions" class="btn-primary btn-small" title="Работы">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="/teacher/assignments/{{ assignment.id }}/edit" class="btn-secondary btn-small" title="Редактировать">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button type="button" class="btn-danger btn-small" title="Удалить"
+                                onclick="deleteAssignment({{ assignment.id }})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<script>
+    function toggleAssignmentAccordion(header) {
+        const item = header.closest('.accordion-item');
+        if (!item) return;
+        item.classList.toggle('open');
+    }
+
+    async function deleteAssignment(assignmentId) {
+        if (!(await uiConfirm('Удалить задание? Это действие нельзя отменить.'))) return;
+        try {
+            const response = await fetch(`/teacher/assignments/${assignmentId}/delete`, {
+                method: 'DELETE', credentials: 'same-origin'
+            });
+            const result = await response.json();
+            if (response.ok) {
+                uiAlert('Задание удалено');
+                window.location.reload();
+            } else {
+                uiAlert('Ошибка: ' + (result.detail || 'Неизвестная ошибка'));
+            }
+        } catch (error) {
+            uiAlert('Ошибка: ' + error.message);
+        }
+    }
+</script>
+{% endblock %}

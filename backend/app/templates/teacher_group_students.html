@@ -1,0 +1,243 @@
+{% extends "teacher_base.html" %}
+
+{% block title %}Данные студентов{% endblock %}
+
+{% block extra_head %}
+<script>
+async function deleteGroup(groupId) {
+        if (!(await uiConfirm('Удалить группу и всех студентов в ней? Это действие нельзя отменить.'))) return;
+        try {
+            const response = await fetch(`/teacher/groups/${groupId}/delete`, { method: 'DELETE', credentials: 'same-origin' });
+            const result = await response.json();
+            if (response.ok) {
+                uiAlert('Группа удалена');
+                window.location.href = '/teacher/groups';
+            } else {
+                uiAlert('Ошибка: ' + (result.detail || 'Неизвестная ошибка'));
+            }
+        } catch (error) {
+            uiAlert('Ошибка: ' + error.message);
+        }
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <a href="/teacher/groups" class="back-link">
+        <i class="fas fa-arrow-left"></i> Назад к группам
+    </a>
+    <h1><i class="fas fa-users"></i> Данные студентов</h1>
+    <p class="page-subtitle">Группа: <strong>{{ group.name }}</strong></p>
+</div>
+
+<div class="dashboard-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+        <div>
+            <h3 style="margin: 0;">
+                <i class="fas fa-user-graduate"></i> 
+                {% if registration_method == 'auto' %}
+                    Автоматически сгенерированные данные
+                {% else %}
+                    Саморегистрация
+                {% endif %}
+            </h3>
+        </div>
+        <div class="toolbar-actions">
+            <button type="button" class="btn-secondary btn-small" onclick="downloadData()">
+                <i class="fas fa-download"></i> Скачать CSV
+            </button>
+            <button type="button" class="btn-secondary btn-small" onclick="window.print()">
+                <i class="fas fa-print"></i> Печать
+            </button>
+            <a href="/teacher/groups/{{ group.id }}/edit" class="btn-primary btn-small">
+                <i class="fas fa-edit"></i> Редактировать
+            </a>
+            <button type="button" class="btn-danger btn-small" onclick="deleteGroup({{ group.id }})">
+                <i class="fas fa-trash"></i> Удалить группу
+            </button>
+        </div>
+    </div>
+    
+    <!-- Код для саморегистрации -->
+    {% if registration_method == 'self' and registration_data %}
+    <div style="margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(139, 92, 246, 0.1); border-radius: 12px; border: 1px solid rgba(139, 92, 246, 0.2); text-align: center;">
+        <div style="font-size: 0.85rem; color: #a1a1aa; margin-bottom: 0.5rem;">
+            <i class="fas fa-users"></i> Код для регистрации студентов
+        </div>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <code style="background: rgba(255, 255, 255, 0.08); padding: 0.5rem 2rem; border-radius: 8px; font-size: 1.5rem; font-weight: 700; color: #a78bfa; letter-spacing: 2px;">
+                {{ registration_data.code }}
+            </code>
+            <button class="btn-secondary btn-copy" onclick="copyText('{{ registration_data.code }}', this)" style="font-size: 0.85rem;">
+                <i class="fas fa-copy"></i> Копировать
+            </button>
+        </div>
+        <div style="margin-top: 0.75rem; color: #fbbf24; font-size: 0.85rem;">
+            <i class="fas fa-info-circle"></i> Передайте этот код студентам. Они смогут зарегистрироваться на странице <strong>/student/register</strong>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Список студентов -->
+    {% if students|length == 0 and registration_method == 'auto' %}
+    <div class="empty-state empty-state--compact">
+        <i class="fas fa-inbox"></i>
+        <p class="empty-state-title">Нет студентов в группе</p>
+        <p class="empty-state-hint">Добавьте студентов при редактировании группы</p>
+    </div>
+    {% elif students|length == 0 and registration_method == 'self' %}
+    <div class="empty-state empty-state--compact empty-state--warn">
+        <i class="fas fa-users"></i>
+        <p class="empty-state-title">Студенты ещё не зарегистрировались</p>
+        <p class="empty-state-hint">После регистрации по коду они появятся в этом списке</p>
+    </div>
+    {% else %}
+    <div class="data-table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Имя студента</th>
+                    <th>Логин</th>
+                    <th>Пароль</th>
+                    <!-- {% if registration_method == 'self' %}
+                    <th>Код регистрации</th> -->
+                    <!-- {% endif %} -->
+                    <th>Статус</th>
+                    <th>Активен</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><strong>{{ student.full_name }}</strong></td>
+                    <td>
+                        <code>{{ student.login }}</code>
+                        <button class="btn-small btn-secondary btn-copy" onclick="copyText('{{ student.login }}', this)" style="font-size: 0.6rem; padding: 0.1rem 0.4rem; margin-left: 0.25rem;">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </td>
+                    <td>
+                        {% if student.password %}
+                        <code class="code-password">
+                            {{ student.password }}
+                        </code>
+                        <button class="btn-small btn-secondary btn-copy" onclick="copyText('{{ student.password }}', this)" style="font-size: 0.6rem; padding: 0.1rem 0.4rem; margin-left: 0.25rem;">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        {% elif not student.registered and registration_method == 'self' %}
+                        <span style="color: #fbbf24;">Ожидает регистрации</span>
+                        {% else %}
+                        <span style="color: #52525b;">—</span>
+                        {% endif %}
+                    </td>
+                    <!-- {% if registration_method == 'self' %}
+                    <td>
+                        {% if student.registration_code and not student.registered %}
+                        <code style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; padding: 0.2rem 0.5rem; border-radius: 4px;">
+                            {{ student.registration_code }}
+                        </code>
+                        <button class="btn-small btn-secondary btn-copy" onclick="copyText('{{ student.registration_code }}', this)" style="font-size: 0.6rem; padding: 0.1rem 0.4rem; margin-left: 0.25rem;">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        {% else %}
+                        <span style="color: #34d399;">Зарегистрирован</span>
+                        {% endif %}
+                    </td>
+                    {% endif %} -->
+                    <td>
+                        {% if student.registered %}
+                        <span class="status-badge status-active"><i class="fas fa-check-circle"></i> Зарегистрирован</span>
+                        {% else %}
+                        <span class="status-badge status-pending"><i class="fas fa-clock"></i> Ожидает</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if student.is_active is defined %}
+                            {% if student.is_active %}
+                            <span class="status-badge status-active"><i class="fas fa-check-circle"></i> Да</span>
+                            {% else %}
+                            <span class="status-badge status-inactive"><i class="fas fa-ban"></i> Нет</span>
+                            {% endif %}
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    
+    <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.04);">
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: space-between; align-items: center;">
+            <div>
+                <span style="color: #a1a1aa;">Всего студентов: </span>
+                <strong style="color: white;">{{ students|length }}</strong>
+                <span style="color: #a1a1aa; margin-left: 1rem;">
+                    Зарегистрировано: 
+                    <strong style="color: #34d399;">{{ students|selectattr('registered', 'equalto', True)|list|length }}</strong>
+                </span>
+                <span style="color: #a1a1aa; margin-left: 1rem;">
+                    Ожидают: 
+                    <strong style="color: #fbbf24;">{{ students|selectattr('registered', 'equalto', False)|list|length }}</strong>
+                </span>
+                <span style="color: #a1a1aa; margin-left: 1rem;">
+                    Активны: 
+                    <strong style="color: #34d399;">
+                        {% if students and students[0].is_active is defined %}
+                            {{ students|selectattr('is_active', 'equalto', True)|list|length }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </strong>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function downloadData() {
+        let csv = 'Имя студента,Логин';
+        {% if registration_method == 'auto' %}
+        csv += ',Пароль,Статус,Активен\n';
+        {% for student in students %}
+        csv += "{{ student.full_name }},{{ student.login }},{{ student.password if student.password else '—' }},{% if student.registered %}Зарегистрирован{% else %}Ожидает{% endif %},{% if student.is_active is defined %}{% if student.is_active %}Да{% else %}Нет{% endif %}{% else %}—{% endif %}\n";
+        {% endfor %}
+        {% else %}
+        csv += ',Код регистрации,Статус,Активен\n';
+        {% for student in students %}
+        csv += "{{ student.full_name }},{{ student.login }},{{ student.registration_code if student.registration_code else '—' }},{% if student.registered %}Зарегистрирован{% else %}Ожидает{% endif %},{% if student.is_active is defined %}{% if student.is_active %}Да{% else %}Нет{% endif %}{% else %}—{% endif %}\n";
+        {% endfor %}
+        {% endif %}
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'students_data.csv';
+        link.click();
+    }
+</script>
+
+<script>
+    async function deleteGroup(groupId) {
+        if (!(await uiConfirm('Удалить группу и всех студентов в ней? Это действие нельзя отменить.'))) return;
+        try {
+            const response = await fetch(`/teacher/groups/${groupId}/delete`, { method: 'DELETE', credentials: 'same-origin' });
+            const result = await response.json();
+            if (response.ok) {
+                uiAlert('Группа удалена');
+                window.location.href = '/teacher/groups';
+            } else {
+                uiAlert('Ошибка: ' + (result.detail || 'Неизвестная ошибка'));
+            }
+        } catch (error) {
+            uiAlert('Ошибка: ' + error.message);
+        }
+    }
+</script>
+{% endblock %}

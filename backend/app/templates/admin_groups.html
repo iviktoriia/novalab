@@ -1,0 +1,93 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Группы — админ{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-users"></i> Группы</h1>
+        <p class="page-subtitle">Назначение преподавателей и дисциплин. Администратор может назначить любые дисциплины.</p>
+    </div>
+    <a href="/admin/groups/create" class="btn-primary">
+        <i class="fas fa-plus"></i> Создать группу
+    </a>
+</div>
+
+{% if error %}
+<div class="dashboard-card" style="border-color: rgba(239, 68, 68, 0.3); margin-bottom: 1.5rem;">
+    <p style="color: #f87171; margin: 0;"><i class="fas fa-exclamation-circle"></i> {{ error }}</p>
+</div>
+{% endif %}
+
+{% if success %}
+<div class="dashboard-card" style="border-color: rgba(16, 185, 129, 0.3); margin-bottom: 1.5rem;">
+    <p style="color: #34d399; margin: 0;"><i class="fas fa-check-circle"></i> {{ success }}</p>
+</div>
+{% endif %}
+
+<div class="dashboard-card">
+    <h3><i class="fas fa-list"></i> Все группы ({{ groups|length }})</h3>
+    {% if groups|length == 0 %}
+    <div class="empty-state empty-state--compact">
+        <i class="fas fa-users"></i>
+        <p class="empty-state-title">Групп пока нет</p>
+        <p class="empty-state-hint">Создайте первую группу кнопкой выше</p>
+    </div>
+    {% else %}
+    <div class="data-table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Название</th>
+                    <th>Источник</th>
+                    <th>Код</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for g in groups %}
+                <tr>
+                    <td>{{ g.id }}</td>
+                    <td>
+                        <a href="/admin/groups/{{ g.id }}" class="table-link">
+                            {{ g.name }}
+                        </a>
+                    </td>
+                    <td>
+                        {% if g.created_by_admin %}
+                        <span style="color: #a78bfa;">Админ</span>
+                        {% elif g.owner_name %}
+                        <span class="text-muted">{{ g.owner_name }}</span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if g.registration_code %}
+                        <code>{{ g.registration_code }}</code>
+                        <button type="button" class="btn-small btn-secondary btn-copy"
+                                onclick="copyText('{{ g.registration_code }}', this)">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="/admin/groups/{{ g.id }}/edit" class="btn-small btn-secondary" title="Редактировать">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="/admin/groups/{{ g.id }}/delete" style="display: inline;"
+                                  onsubmit="return uiConfirmSubmit(event, 'Удалить группу «{{ g.name }}»?');">
+                                <button type="submit" class="btn-small btn-danger" title="Удалить">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

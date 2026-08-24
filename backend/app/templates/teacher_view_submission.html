@@ -1,0 +1,372 @@
+<!-- backend/templates/teacher_view_submission.html -->
+{% extends "teacher_base.html" %}
+
+{% block title %}Просмотр работы{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <a href="/teacher/assignment/{{ assignment.id }}/submissions" class="back-link">
+        <i class="fas fa-arrow-left"></i> Назад к работам
+    </a>
+    <h1><i class="fas fa-eye"></i> Просмотр работы</h1>
+</div>
+
+<div class="info-grid">
+    <div class="info-card">
+        <div class="info-label"><i class="fas fa-user"></i> Студент</div>
+        <div class="info-value">{{ student.full_name if student else 'Неизвестно' }}</div>
+    </div>
+    <div class="info-card">
+        <div class="info-label"><i class="fas fa-users"></i> Группа</div>
+        <div class="info-value">{{ student.group.name if student and student.group else 'Неизвестно' }}</div>
+    </div>
+    <div class="info-card">
+        <div class="info-label"><i class="fas fa-tasks"></i> Задание</div>
+        <div class="info-value">{{ assignment.title if assignment else 'Неизвестно' }}</div>
+    </div>
+    <div class="info-card">
+        <div class="info-label"><i class="fas fa-book"></i> Дисциплина</div>
+        <div class="info-value">{{ subject.name if subject else 'Неизвестно' }}</div>
+    </div>
+    <div class="info-card">
+        <div class="info-label"><i class="fas fa-calendar-alt"></i> Дата сдачи</div>
+        <div class="info-value">{{ submission.submitted_at|format_dt if submission.submitted_at else 'Неизвестно' }}</div>
+    </div>
+    <div class="info-card">
+        <div class="info-label"><i class="fas fa-clock"></i> Статус</div>
+        <div class="info-value">
+            {% if submission.status == 'accepted' %}
+            <span style="color: #34d399;"><i class="fas fa-check-circle"></i> Принято</span>
+            {% elif submission.status == 'revision' %}
+            <span style="color: #fbbf24;"><i class="fas fa-edit"></i> На доработку</span>
+            {% elif submission.status == 'rejected' %}
+            <span style="color: #f87171;"><i class="fas fa-times-circle"></i> Отклонено</span>
+            {% else %}
+            <span style="color: #60a5fa;"><i class="fas fa-clock"></i> На проверке</span>
+            {% endif %}
+            {% if submission.resubmission_count > 0 %}
+            <br><span style="font-size: 0.8rem; color: #52525b;">Пересдач: {{ submission.resubmission_count }}</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="info-card">
+        <div class="info-label"><i class="fas fa-star"></i> Оценка</div>
+        <div class="info-value">
+            {% if submission.grade is not none %}
+            <span class="grade-value">{{ submission.grade }}</span>
+            {% else %}
+            <span class="text-muted"><i class="fas fa-hourglass"></i> Не оценено</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Информация о дедлайне -->
+<div class="dashboard-card">
+    <h3><i class="fas fa-clock"></i> Информация о дедлайне</h3>
+    <div style="display: flex; flex-wrap: wrap; gap: 1.5rem;">
+        <div>
+            <div style="font-size: 0.85rem; color: #a1a1aa;">Дедлайн</div>
+            <div style="font-size: 1.1rem; font-weight: 600; color: white;">
+                {% if assignment.deadline %}
+                    {{ assignment.deadline.strftime('%d.%m.%Y %H:%M') }}
+                {% else %}
+                    <span style="color: #52525b;">Не установлен</span>
+                {% endif %}
+            </div>
+        </div>
+        <div>
+            <div style="font-size: 0.85rem; color: #a1a1aa;">Дата сдачи</div>
+            <div style="font-size: 1.1rem; font-weight: 600; color: white;">
+                {{ submission.submitted_at|format_dt if submission.submitted_at else 'Неизвестно' }}
+            </div>
+        </div>
+        {% if assignment.deadline %}
+        <div>
+            <div style="font-size: 0.85rem; color: #a1a1aa;">Опоздание</div>
+            <div style="font-size: 1.1rem; font-weight: 600;">
+                {# дедлайн из формы — локальное время; сдача из БД может быть UTC → to_local #}
+                {% set deadline_local = assignment.deadline.replace(tzinfo=None) %}
+                {% set submitted_local = submission.submitted_at|to_local if submission.submitted_at else None %}
+                {% if submitted_local and submitted_local > deadline_local %}
+                    {% set diff = submitted_local - deadline_local %}
+                    {% set days = diff.days %}
+                    {% set hours = diff.seconds // 3600 %}
+                    {% set minutes = (diff.seconds % 3600) // 60 %}
+                    <span style="color: #f87171;">
+                        {% if days > 0 %}
+                            {{ days }} д. {{ hours }} ч. {{ minutes }} м.
+                        {% else %}
+                            {{ hours }} ч. {{ minutes }} м.
+                        {% endif %}
+                    </span>
+                {% elif submitted_local %}
+                    <span style="color: #34d399;">В срок</span>
+                {% else %}
+                    <span style="color: #52525b;">—</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Текст задания -->
+<div class="dashboard-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+        <h3 style="margin: 0;"><i class="fas fa-file-alt"></i> Текст задания</h3>
+        {% if assignment.requirements %}
+        <button class="file-toggle-btn" onclick="toggleTextContent(this)">
+            <i class="fas fa-chevron-down"></i>
+            <span>Показать текст задания</span>
+        </button>
+        {% endif %}
+    </div>
+    
+    {% if assignment.description %}
+    <div style="color: #a1a1aa; font-size: 0.9rem; margin-bottom: 0.5rem;">
+        <i class="fas fa-info-circle" style="color: #60a5fa;"></i> {{ assignment.description | trim }}
+    </div>
+    {% endif %}
+    
+    {% if assignment.requirements %}
+    <div id="requirementsContent" class="requirements-panel" style="display: none; margin-top: 0.75rem;">
+        <div class="requirements-body">{{ assignment.requirements | trim }}</div>
+    </div>
+    {% else %}
+    <p class="text-muted" style="margin-top: 0.5rem;">
+        <i class="fas fa-info-circle"></i> Текст задания не добавлен
+    </p>
+    {% endif %}
+
+    {% if assignment_files and assignment_files|length > 0 %}
+    <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06);">
+        <p style="font-size: 0.85rem; color: #a1a1aa; margin-bottom: 0.5rem;">
+            <i class="fas fa-paperclip"></i> Файлы задания
+        </p>
+        <ul class="file-list">
+            {% for file in assignment_files %}
+            <li>
+                <div class="file-list-row">
+                    <i class="fas fa-file" style="color: #a1a1aa;"></i>
+                    <a href="/teacher/assignments/{{ assignment.id }}/download/{{ file.index }}">{{ file.original_name }}</a>
+                    {% if file.size %}
+                    <span class="file-size">({{ (file.size / 1024)|round(1) }} KB)</span>
+                    {% endif %}
+                    {% set ext = file.extension if file.extension else '' %}
+                    {% set acontent = assignment_file_contents.get(file.index|string, '') if assignment_file_contents else '' %}
+                    {% if acontent %}
+                    <button type="button" class="file-toggle-btn" onclick="toggleFileContent(this)">
+                        <i class="fas fa-chevron-down"></i>
+                        <span>Показать содержимое</span>
+                    </button>
+                    {% elif ext in ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp'] %}
+                    <button type="button" class="file-toggle-btn" onclick="toggleFileContent(this)">
+                        <i class="fas fa-chevron-down"></i>
+                        <span>Показать изображение</span>
+                    </button>
+                    {% endif %}
+                </div>
+                {% if acontent %}
+                <div class="file-content" style="display: none;">
+                    <div class="file-content-body">
+                        <pre><code>{{ acontent }}</code></pre>
+                    </div>
+                </div>
+                {% elif ext in ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp'] %}
+                <div class="file-content" style="display: none;">
+                    <div class="file-content-body image-preview">
+                        <img src="/teacher/assignments/{{ assignment.id }}/download/{{ file.index }}" alt="{{ file.original_name }}">
+                    </div>
+                </div>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Прикрепленные файлы работы студента -->
+<div class="dashboard-card">
+    <h3><i class="fas fa-paperclip"></i> Файлы работы студента</h3>
+    
+    {% set files = submission.files_list if submission.files_list else (submission.files if submission.files else []) %}
+    {% if files|length > 0 %}
+        <ul class="file-list">
+        {% for file in files %}
+            <li>
+                {% set ext = file.extension|lower if file.extension else '' %}
+                <div class="file-list-row">
+                {% if ext == '.pdf' %}
+                    <i class="fas fa-file-pdf" style="color: #f87171;"></i>
+                {% elif ext in ['.zip', '.rar', '.7z'] %}
+                    <i class="fas fa-file-archive" style="color: #a78bfa;"></i>
+                {% elif ext in ['.ppt', '.pptx', '.odp'] %}
+                    <i class="fas fa-file-powerpoint" style="color: #fbbf24;"></i>
+                {% elif ext in ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp'] %}
+                    <i class="fas fa-file-image" style="color: #f472b6;"></i>
+                {% elif ext in ['.doc', '.docx'] %}
+                    <i class="fas fa-file-word" style="color: #60a5fa;"></i>
+                {% elif ext in ['.py', '.js', '.java', '.cpp', '.c', '.h', '.hpp', '.cs', '.go', '.rs', '.rb', '.php', '.swift', '.kt', '.scala', '.sh', '.sql', '.html', '.css', '.vue', '.jsx', '.tsx', '.json', '.xml', '.yml', '.yaml', '.md', '.txt', '.csv'] %}
+                    <i class="fas fa-file-code" style="color: #8b5cf6;"></i>
+                {% else %}
+                    <i class="fas fa-file" style="color: #a1a1aa;"></i>
+                {% endif %}
+                <a href="/teacher/submission/{{ submission.id }}/download/{{ loop.index0 }}">{{ file.original_name }}</a>
+                <span class="file-size">({{ (file.size / 1024)|round(1) if file.size else 0 }} KB)</span>
+                {% if ext in ['.py', '.txt', '.js', '.cpp', '.c', '.h', '.hpp', '.cs', '.go', '.rs', '.rb', '.php', '.swift', '.kt', '.scala', '.sh', '.sql', '.html', '.css', '.vue', '.jsx', '.tsx', '.json', '.xml', '.yml', '.yaml', '.md', '.csv'] %}
+                    {% set file_content = file_contents.get(file.saved_name, file_contents.get(file.original_name, '')) %}
+                    {% if file_content %}
+                    <button type="button" class="file-toggle-btn" onclick="toggleFileContent(this)">
+                        <i class="fas fa-chevron-down"></i>
+                        <span>Показать содержимое</span>
+                    </button>
+                    {% endif %}
+                {% elif ext in ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp'] %}
+                    <button type="button" class="file-toggle-btn" onclick="toggleFileContent(this)">
+                        <i class="fas fa-chevron-down"></i>
+                        <span>Показать изображение</span>
+                    </button>
+                {% endif %}
+                </div>
+                {% if ext in ['.py', '.txt', '.js', '.cpp', '.c', '.h', '.hpp', '.cs', '.go', '.rs', '.rb', '.php', '.swift', '.kt', '.scala', '.sh', '.sql', '.html', '.css', '.vue', '.jsx', '.tsx', '.json', '.xml', '.yml', '.yaml', '.md', '.csv'] %}
+                    {% set file_content = file_contents.get(file.saved_name, file_contents.get(file.original_name, '')) %}
+                    {% if file_content %}
+                    <div class="file-content" style="display: none;">
+                        <div class="file-content-body">
+                            <pre><code>{{ file_content }}</code></pre>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% elif ext in ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp'] %}
+                    <div class="file-content" style="display: none;">
+                        <div class="file-content-body image-preview">
+                            <img src="/teacher/submission/{{ submission.id }}/download/{{ loop.index0 }}" alt="{{ file.original_name }}" style="max-width: 100%; max-height: 400px; border-radius: 8px;">
+                        </div>
+                    </div>
+                {% endif %}
+            </li>
+        {% endfor %}
+
+        </ul>
+    {% else %}
+    <p class="text-muted"><i class="fas fa-info-circle"></i> Файлы не прикреплены</p>
+    {% endif %}
+</div>
+
+<!-- Ссылка на GitHub -->
+{% if submission.github_link %}
+<div class="dashboard-card">
+    <h3><i class="fab fa-github"></i> Ссылка на GitHub</h3>
+    <a href="{{ submission.github_link }}" target="_blank" rel="noopener" class="github-link">
+        <i class="fab fa-github"></i> {{ submission.github_link }}
+    </a>
+</div>
+{% endif %}
+
+<!-- Оценка и статус -->
+<div class="dashboard-card">
+    <h3><i class="fas fa-star"></i> Оценка и статус</h3>
+    
+    {% if submission.feedback %}
+    <div style="background: rgba(255, 255, 255, 0.04); border-left: 3px solid #8b5cf6; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem;">
+        <div style="font-size: 0.85rem; color: #a1a1aa; margin-bottom: 0.25rem;">Комментарий преподавателя</div>
+        <div style="color: #e2e8f0; white-space: pre-wrap;">{{ submission.feedback }}</div>
+    </div>
+    {% endif %}
+    
+    <form method="POST" action="/teacher/submission/{{ submission.id }}/review">
+        <div class="form-group">
+            <label for="feedback">Комментарий / Замечания</label>
+            <textarea id="feedback" name="feedback" rows="3" 
+                      placeholder="Что нужно исправить? Какие есть замечания?">{{ submission.feedback or '' }}</textarea>
+        </div>
+        
+        <div id="gradeBlock" style="margin-bottom: 1rem;">
+            <div class="form-group">
+                <label>Оценка (2–5)</label>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    {% for g in [2, 3, 4, 5] %}
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.3rem 0.8rem; background: rgba(255,255,255,0.04); border-radius: 8px;">
+                        <input type="radio" name="grade" value="{{ g }}" {% if submission.grade == g %}checked{% endif %}>
+                        <span style="font-size: 1.1rem; font-weight: 600; color: white;">{{ g }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <small class="form-hint">Выберите оценку и нажмите «Принять». Для «На доработку» / «Отклонить» оценка не обязательна.</small>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <button type="submit" name="action" value="accept" class="btn-success" onclick="return requireGrade(event)">
+                <i class="fas fa-check"></i> Принять с оценкой
+            </button>
+            <button type="submit" name="action" value="revision" class="btn-warning">
+                <i class="fas fa-edit"></i> На доработку
+            </button>
+            <button type="submit" name="action" value="reject" class="btn-danger">
+                <i class="fas fa-times"></i> Отклонить
+            </button>
+            {% if submission.status != 'submitted' %}
+            <button type="submit" name="action" value="reset" class="btn-secondary">
+                <i class="fas fa-undo"></i> Сбросить статус
+            </button>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<script>
+    function toggleTextContent(btn) {
+        const content = document.getElementById('requirementsContent');
+        if (!content) return;
+        const isHidden = content.style.display === 'none' || content.style.display === '';
+        if (isHidden) {
+            content.style.display = 'block';
+            btn.querySelector('i').className = 'fas fa-chevron-up';
+            btn.querySelector('span').textContent = 'Скрыть текст задания';
+        } else {
+            content.style.display = 'none';
+            btn.querySelector('i').className = 'fas fa-chevron-down';
+            btn.querySelector('span').textContent = 'Показать текст задания';
+        }
+    }
+
+    function toggleFileContent(btn) {
+        const li = btn.closest('li');
+        let content = null;
+        if (li) {
+            content = li.querySelector('.file-content');
+        }
+        if (!content) {
+            // fallback: sibling of row or button
+            const row = btn.closest('.file-list-row');
+            if (row) content = row.nextElementSibling;
+            else content = btn.nextElementSibling;
+        }
+        if (!content) return;
+        const isHidden = content.style.display === 'none' || content.style.display === '';
+        content.style.display = isHidden ? 'block' : 'none';
+        const icon = btn.querySelector('i');
+        const text = btn.querySelector('span');
+        if (isHidden) {
+            if (icon) icon.className = 'fas fa-chevron-up';
+            if (text) text.textContent = text.textContent.replace('Показать', 'Скрыть');
+        } else {
+            if (icon) icon.className = 'fas fa-chevron-down';
+            if (text) text.textContent = text.textContent.replace('Скрыть', 'Показать');
+        }
+    }
+
+    function requireGrade(e) {
+        const checked = document.querySelector('input[name="grade"]:checked');
+        if (!checked) {
+            e.preventDefault();
+            uiAlert('Выберите оценку перед принятием работы');
+            return false;
+        }
+        return true;
+    }
+</script>
+{% endblock %}

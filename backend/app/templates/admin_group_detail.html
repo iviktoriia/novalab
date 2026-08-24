@@ -1,0 +1,145 @@
+{% extends "admin_base.html" %}
+
+{% block title %}{{ group.name }} — студенты{% endblock %}
+
+{% block extra_head %}
+<script>
+function downloadTableCsv(tableId, filename) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const rows = [];
+    table.querySelectorAll('tr').forEach(tr => {
+        const cells = [...tr.querySelectorAll('th,td')].map(td => {
+            let x = (td.innerText || '').replace(/\s+/g, ' ').trim();
+            if (x.includes(',') || x.includes('"')) x = '"' + x.replace(/"/g, '""') + '"';
+            return x;
+        });
+        rows.push(cells.join(','));
+    });
+    const blob = new Blob(['\uFEFF' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename || 'export.csv';
+    a.click();
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <a href="/admin/groups" class="back-link">
+        <i class="fas fa-arrow-left"></i> К группам
+    </a>
+    <h1><i class="fas fa-users"></i> {{ group.name }}</h1>
+    <p class="page-subtitle">
+        {% if group.registration_method == 'self' and group.registration_code %}
+        Код регистрации:
+        <code style="color: #a78bfa;">{{ group.registration_code }}</code>
+        <button type="button" class="btn-small btn-secondary btn-copy"
+                onclick="copyText('{{ group.registration_code }}', this)" title="Копировать">
+            <i class="fas fa-copy"></i>
+        </button>
+        {% else %}
+        Авторегистрация 
+        {% endif %}
+    </p>
+    <div style="margin-top: 0.75rem;">
+        <a href="/admin/groups/{{ group.id }}/edit" class="btn-secondary">
+            <i class="fas fa-edit"></i> Редактировать группу
+        </a>
+    </div>
+</div>
+
+<div class="dashboard-card">
+    <div class="toolbar-row">
+    <h3>
+        <i class="fas fa-user-graduate"></i> Студенты
+        <span style="font-weight: 400; color: #a1a1aa; font-size: 0.9rem;">
+            ({{ students|length }})
+        </span>
+    </h3>
+    <div class="toolbar-actions">       
+        <button type="button" class="btn-secondary btn-small" onclick="downloadTableCsv('admin-group-students-table', 'students_group_{{ group.name|replace(" ", "_") }}.csv')">
+            <i class="fas fa-download"></i> Скачать CSV
+        </button>
+        <button type="button" class="btn-secondary btn-small" onclick="window.print()">
+            <i class="fas fa-print"></i> Печать
+        </button>
+    </div></div>
+
+    {% if students|length == 0 %}
+    <div class="empty-state empty-state--compact">
+        <i class="fas fa-user-graduate"></i>
+        <p class="empty-state-title">В группе пока нет студентов</p>
+    </div>
+    {% else %}
+    <div class="data-table-wrapper mt-1">
+        <table class="data-table" id="admin-group-students-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Имя</th>
+                    <th>Логин</th>
+                    <th>Пароль</th>
+                    <th>Статус</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in students %}
+                <tr>
+                    <td>{{ s.id }}</td>
+                    <td><strong>{{ s.full_name }}</strong></td>
+                    <td>
+                        <code>{{ s.login }}</code>
+                        <button type="button" class="btn-small btn-secondary btn-copy"
+                                onclick="copyText('{{ s.login }}', this)" title="Копировать">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </td>
+                    <td>
+                        {% if s.password %}
+                        <code class="code-password">
+                            {{ s.password }}
+                        </code>
+                        <button type="button" class="btn-small btn-secondary btn-copy"
+                                onclick="copyText('{{ s.password }}', this)" title="Копировать">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        {% else %}
+                        <span class="text-muted" title="Пароль не сохранён в БД">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if s.is_active is defined and not s.is_active %}
+                        <span class="status-badge status-inactive"><i class="fas fa-ban"></i> Отключён</span>
+                        {% elif s.registered %}
+                        <span class="status-badge status-active"><i class="fas fa-check-circle"></i> Зарегистрирован</span>
+                        {% else %}
+                        <span class="status-badge status-pending"><i class="fas fa-clock"></i> Ожидает</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <form method="POST" action="/admin/students/{{ s.id }}/toggle" style="display: inline;">
+                                <button type="submit" class="btn-small btn-secondary"
+                                        title="{% if s.is_active is defined and not s.is_active %}Включить{% else %}Отключить{% endif %}">
+                                    <i class="fas fa-{% if s.is_active is defined and not s.is_active %}check{% else %}ban{% endif %}"></i>
+                                </button>
+                            </form>
+                            <form method="POST" action="/admin/students/{{ s.id }}/delete" style="display: inline;"
+                                  onsubmit="return uiConfirmSubmit(event, 'Удалить студента «{{ s.full_name }}»?');">
+                                <button type="submit" class="btn-small btn-danger" title="Удалить">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

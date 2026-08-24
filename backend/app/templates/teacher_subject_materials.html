@@ -1,0 +1,109 @@
+{% extends "teacher_base.html" %}
+
+{% block title %}Материалы дисциплины{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <a href="/teacher/subjects" class="back-link">
+        <i class="fas fa-arrow-left"></i> Назад к дисциплинам
+    </a>
+    <h1><i class="fas fa-paperclip"></i> {{ subject.name }}</h1>
+    <p class="page-subtitle">{{ subject.description or 'Нет описания' }}</p>
+</div>
+
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+    <div>
+        <span class="badge-item"><i class="fas fa-file"></i> Всего материалов: {{ materials|length }}</span>
+    </div>
+    <a href="/teacher/subjects/{{ subject.id }}/materials/create" class="btn-primary">
+        <i class="fas fa-plus"></i> Добавить материалы
+    </a>
+</div>
+
+{% if materials|length == 0 %}
+<div class="dashboard-card">
+    <div class="empty-state">
+        <i class="fas fa-inbox"></i>
+        <p class="empty-state-title">Нет учебных материалов</p>
+        <p class="empty-state-hint">Нажмите «Добавить материалы» выше</p>
+    </div>
+</div>
+{% else %}
+<div class="materials-grid">
+    {% for material in materials %}
+    <div class="material-card">
+        <div class="material-card-header">
+            <div class="material-card-title">
+                <i class="fas fa-file-alt"></i>
+                <span>{{ material.title }}</span>
+            </div>
+            <span class="material-type-badge {{ material.material_type.value if material.material_type else 'other' }}">
+                {% if material.material_type.value == 'lecture' %}Лекция
+                {% elif material.material_type.value == 'practical' %}Практика
+                {% elif material.material_type.value == 'presentation' %}Презентация
+                {% elif material.material_type.value == 'laboratory' %}Лабораторная
+                {% elif material.material_type.value == 'homework' %}ДЗ
+                {% elif material.material_type.value == 'exam' %}Экзамен
+                {% else %}Другое
+                {% endif %}
+            </span>
+        </div>
+
+        {% if material.description %}
+        <div class="material-card-desc">{{ material.description }}</div>
+        {% endif %}
+
+        <div class="material-card-files">
+            {% set files = material.files if material.files else [] %}
+            {% if files %}
+                {% for file in files %}
+                <a href="/teacher/materials/{{ material.id }}/download/{{ loop.index0 }}" class="material-file-link">
+                    <i class="fas fa-file"></i>
+                    <span>{{ file.original_name }}</span>
+                    <span class="file-size">({{ (file.size / 1024)|round(1) if file.size else 0 }} KB)</span>
+                </a>
+                {% endfor %}
+            {% else %}
+                <span class="text-muted" style="font-size: 0.8rem;">Нет файлов</span>
+            {% endif %}
+        </div>
+
+        <div class="material-card-actions">
+            <span class="material-card-date">{{ material.created_at.strftime('%d.%m.%Y') if material.created_at else '—' }}</span>
+            <div>
+                <a href="/teacher/materials/{{ material.id }}/edit" class="btn-small btn-secondary">
+                    <i class="fas fa-edit"></i>
+                </a>
+                <button class="btn-small btn-danger" onclick="deleteMaterial({{ material.id }})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<script>
+    async function deleteMaterial(materialId) {
+        if (!(await uiConfirm('Удалить материал? Это действие нельзя отменить.'))) return;
+
+        try {
+            const response = await fetch(`/teacher/materials/${materialId}/delete`, {
+                method: 'DELETE', credentials: 'same-origin'
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                uiAlert('Материал удален');
+                window.location.reload();
+            } else {
+                uiAlert('Ошибка: ' + (result.detail || 'Неизвестная ошибка'));
+            }
+        } catch (error) {
+            uiAlert('Ошибка: ' + error.message);
+        }
+    }
+</script>
+{% endblock %}

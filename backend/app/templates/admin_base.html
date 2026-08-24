@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru" class="page-wrapper">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Панель администратора{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <script src="/static/copy.js" defer></script>
+    <script src="/static/nav.js" defer></script>
+    <script src="/static/modal.js" defer></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <div class="container">
+            <a href="/admin/dashboard" class="logo" title="NovaLab">
+                <img src="/static/logo-admin.svg" alt="NovaLab" class="logo-img">
+            </a>
+            <button type="button" class="nav-burger" id="navBurger" aria-label="Меню" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
+
+            <div class="nav-links" id="navLinks">
+                <a href="/admin/dashboard"{% if request.url.path == '/admin/dashboard' %} class="active"{% endif %}>
+                    Преподаватели
+                </a>
+                <a href="/admin/groups"{% if '/admin/groups' in request.url.path %} class="active"{% endif %}>
+                    Группы
+                </a>
+                <a href="/admin/subjects"{% if '/admin/subjects' in request.url.path %} class="active"{% endif %}>
+                    Дисциплины
+                </a>
+                <a href="/admin/logout" class="nav-logout">
+                    <i class="fas fa-sign-out-alt"></i> Выйти
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content teacher-content">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 AdminLab от NovaLab &mdash; Панель администратора</p>
+        </div>
+    </footer>
+</body>
+</html>

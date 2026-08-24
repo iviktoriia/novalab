@@ -1,0 +1,31 @@
+{% extends "public_base.html" %}
+
+{% block title %}Вход администратора{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <h2><i class="fas fa-user-shield"></i> Вход администратора</h2>
+
+        {% if error %}
+        <div style="padding: 1rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; color: #f87171; margin-bottom: 1rem;">
+            <i class="fas fa-exclamation-circle"></i> {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="/admin/login" method="POST">
+            <div class="form-group">
+                <label for="login"><i class="fas fa-user"></i> Логин</label>
+                <input type="text" id="login" name="login" required placeholder="admin" autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="password"><i class="fas fa-lock"></i> Пароль</label>
+                <input type="password" id="password" name="password" required placeholder="••••••••" autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-arrow-right"></i> Войти
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

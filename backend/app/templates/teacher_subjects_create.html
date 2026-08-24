@@ -1,0 +1,62 @@
+{% extends "teacher_base.html" %}
+
+{% block title %}Создание дисциплины{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <a href="/teacher/subjects" class="back-link">
+        <i class="fas fa-arrow-left"></i> Назад к дисциплинам
+    </a>
+    <h1><i class="fas fa-plus"></i> Создание дисциплины</h1>
+</div>
+
+<div class="dashboard-card">
+    <form method="POST" action="/teacher/subjects/create">
+        <div class="form-group">
+            <label for="subjectName">Название дисциплины <span style="color: #f87171;">*</span></label>
+            <input type="text" id="subjectName" name="name"
+                   placeholder="Например: Программирование на Python"
+                   required>
+        </div>
+
+        <div class="form-group">
+            <label>Преподаватель</label>
+            <p style="color: #a1a1aa; margin: 0.35rem 0 0;">
+                Вы будете назначены автоматически
+                {% if teacher %}
+                    ({{ teacher.full_name }})
+                {% elif request.session.get('full_name') %}
+                    ({{ request.session.get('full_name') }})
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="form-group">
+            <label for="subjectDescription">Описание</label>
+            <textarea id="subjectDescription" name="description" rows="4"
+                      placeholder="Краткое описание дисциплины"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+            
+            <div class="form-group">
+                <label for="attestation_type">Вид аттестации</label>
+                <select id="attestation_type" name="attestation_type">
+                    {% for opt in attestation_options %}
+                    <option value="{{ opt.value }}">{{ opt.label }}</option>
+                    {% endfor %}
+                </select>
+                <p style="font-size:0.8rem;color:#a1a1aa;margin-top:0.35rem;">
+                    Для экзамена и дифзачёта система покажет прогноз оценки по ДЗ (только вам).
+                </p>
+            </div>
+        </div>
+        <button type="submit" class="btn-primary">
+                <i class="fas fa-save"></i> Создать дисциплину
+            </button>
+            <a href="/teacher/subjects" class="btn-secondary">
+                <i class="fas fa-times"></i> Отмена
+            </a>
+    </form>
+</div>
+{% endblock %}

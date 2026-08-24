@@ -1,0 +1,107 @@
+{% extends "public_base.html" %}
+
+{% block title %}NovaLab — учебная платформа{% endblock %}
+
+{% block main_class %}main-content--landing{% endblock %}
+
+{% block content %}
+<section class="landing-hero">
+    <div class="container">
+        <div class="landing-hero-inner">
+            <p class="landing-eyebrow">Учебная платформа для каждого</p>
+            <h1 class="landing-title">NovaLab</h1>
+            <p class="landing-lead">
+                Сдача домашних работ, учебные материалы, проверка и прогноз аттестации —
+                в одном месте для студентов и преподавателей.
+            </p>
+            <div class="landing-cta">
+                <a href="/student/login" class="btn-primary landing-btn">
+                    <i class="fas fa-user-graduate"></i> Вход для студента
+                </a>
+                <a href="/teacher/login" class="btn-secondary landing-btn">
+                    <i class="fas fa-chalkboard-teacher"></i> Вход для преподавателя
+                </a>
+            </div>
+            <p class="landing-register-hint">
+                Нет аккаунта студента?
+                <a href="/student/register">Регистрация по коду группы</a>
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="landing-section">
+    <div class="container">
+        <h2 class="landing-section-title">Что умеет платформа</h2>
+        <div class="landing-features">
+            <article class="landing-feature">
+                <div class="landing-feature-icon"><i class="fas fa-file-upload"></i></div>
+                <h3>Сдача работ</h3>
+                <p>Студенты прикрепляют файлы или ссылку на GitHub, видят дедлайны, статус и оценку.</p>
+            </article>
+            <article class="landing-feature">
+                <div class="landing-feature-icon"><i class="fas fa-book-open"></i></div>
+                <h3>Материалы</h3>
+                <p>Лекции, практикумы и файлы по дисциплинам — доступны студентам группы.</p>
+            </article>
+            <article class="landing-feature">
+                <div class="landing-feature-icon"><i class="fas fa-check-double"></i></div>
+                <h3>Проверка</h3>
+                <p>Преподаватель принимает работы, ставит оценку и оставляет комментарий.</p>
+            </article>
+            <article class="landing-feature">
+                <div class="landing-feature-icon"><i class="fas fa-graduation-cap"></i></div>
+                <h3>Аттестация</h3>
+                <p>Для экзамена и дифзачёта — ориентир по оценкам, срокам и полноте сдач.</p>
+            </article>
+            <article class="landing-feature">
+                <div class="landing-feature-icon"><i class="fas fa-users"></i></div>
+                <h3>Группы</h3>
+                <p>Группы, коды регистрации, учётные данные студентов в одном кабинете.</p>
+            </article>
+            <article class="landing-feature">
+                <div class="landing-feature-icon"><i class="fas fa-chart-line"></i></div>
+                <h3>Прозрачность</h3>
+                <p>Понятный статус работ и выгрузка списков (CSV / печать) для преподавателя.</p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="landing-section landing-section--alt">
+    <div class="container">
+        <h2 class="landing-section-title">Как начать</h2>
+        <div class="landing-steps">
+            <div class="landing-step">
+                <span class="landing-step-num">1</span>
+                <div>
+                    <h3>Выберите роль</h3>
+                    <p>Студент или преподаватель — отдельный вход в шапке или кнопками выше.</p>
+                </div>
+            </div>
+            <div class="landing-step">
+                <span class="landing-step-num">2</span>
+                <div>
+                    <h3>Войдите в кабинет</h3>
+                    <p>Студентам логин выдаёт преподаватель или можно зарегистрироваться по коду группы.</p>
+                </div>
+            </div>
+            <div class="landing-step">
+                <span class="landing-step-num">3</span>
+                <div>
+                    <h3>Работайте с дисциплинами</h3>
+                    <p>Материалы, задания, сдача и проверка — всё в NovaLab.</p>
+                </div>
+            </div>
+        </div>
+        <div class="landing-cta landing-cta--bottom">
+            <a href="/student/login" class="btn-primary landing-btn">
+                <i class="fas fa-user-graduate"></i> Студент
+            </a>
+            <a href="/teacher/login" class="btn-secondary landing-btn">
+                <i class="fas fa-chalkboard-teacher"></i> Преподаватель
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}

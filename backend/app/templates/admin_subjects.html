@@ -1,0 +1,88 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Дисциплины — админ{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-book"></i> Дисциплины</h1>
+        <p class="page-subtitle">Назначение преподавателей. Назначенные могут вести материалы и ДЗ.</p>
+    </div>
+    <a href="/admin/subjects/create" class="btn-primary">
+        <i class="fas fa-plus"></i> Создать дисциплину
+    </a>
+</div>
+
+{% if error %}
+<div class="dashboard-card" style="border-color: rgba(239, 68, 68, 0.3); margin-bottom: 1.5rem;">
+    <p style="color: #f87171; margin: 0;"><i class="fas fa-exclamation-circle"></i> {{ error }}</p>
+</div>
+{% endif %}
+
+{% if success %}
+<div class="dashboard-card" style="border-color: rgba(16, 185, 129, 0.3); margin-bottom: 1.5rem;">
+    <p style="color: #34d399; margin: 0;"><i class="fas fa-check-circle"></i> {{ success }}</p>
+</div>
+{% endif %}
+
+<div class="dashboard-card">
+    <h3><i class="fas fa-list"></i> Все дисциплины ({{ subjects|length }})</h3>
+    {% if subjects|length == 0 %}
+    <div class="empty-state empty-state--compact">
+        <i class="fas fa-book"></i>
+        <p class="empty-state-title">Дисциплин пока нет</p>
+        <p class="empty-state-hint">Создайте первую дисциплину кнопкой выше</p>
+    </div>
+    {% else %}
+    <div class="data-table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Источник</th>
+                    <th>Преподаватели</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in subjects %}
+                <tr>
+                    <td>
+                        <strong>{{ s.name }}</strong>
+                        {% if s.description %}
+                        <div class="text-muted" style="font-size: 0.8rem;">
+                            {{ s.description[:80] }}{% if s.description|length > 80 %}…{% endif %}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if s.created_by_admin %}
+                        <span style="color: #a78bfa;">Админ</span>
+                        {% elif s.owner_name %}
+                        <span class="text-muted">{{ s.owner_name }}</span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="text-muted" style="font-size: 0.85rem;">
+                        {{ s.teacher_names | join(', ') if s.teacher_names else '—' }}
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="/admin/subjects/{{ s.id }}/edit" class="btn-small btn-secondary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="/admin/subjects/{{ s.id }}/delete" style="display: inline;"
+                                  onsubmit="return uiConfirmSubmit(event, 'Удалить дисциплину «{{ s.name }}»?\n\nБудут также удалены все её задания, работы студентов и материалы.');">
+                                <button type="submit" class="btn-small btn-danger">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

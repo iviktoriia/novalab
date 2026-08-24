@@ -1,0 +1,68 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Создать дисциплину{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="/admin/subjects" class="back-link">
+            <i class="fas fa-arrow-left"></i> Назад к списку
+        </a>
+        <h1><i class="fas fa-book"></i> Создать дисциплину</h1>
+        <p class="page-subtitle">Назначьте преподавателей, которые смогут вести материалы и задания.</p>
+    </div>
+</div>
+
+{% if error %}
+<div class="dashboard-card" style="border-color: rgba(239, 68, 68, 0.3); margin-bottom: 1.5rem;">
+    <p style="color: #f87171; margin: 0;"><i class="fas fa-exclamation-circle"></i> {{ error }}</p>
+</div>
+{% endif %}
+
+<div class="dashboard-card">
+    <form method="POST" action="/admin/subjects/create">
+        <div class="form-group">
+            <label for="name">Название</label>
+            <input type="text" id="name" name="name" required placeholder="Программирование на Python"
+                   value="{{ name or '' }}">
+        </div>
+
+        <div class="form-group">
+            <label for="description">Описание</label>
+            <textarea id="description" name="description" rows="3" placeholder="Краткое описание">{{ description or '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="teacher_ids">Преподаватели</label>
+            {% if teachers|length == 0 %}
+            <p class="text-muted">Сначала создайте преподавателей</p>
+            {% else %}
+            <select id="teacher_ids" name="teacher_ids" multiple size="6">
+                {% for t in teachers %}
+                <option value="{{ t.id }}" {% if selected_teachers and t.id in selected_teachers %}selected{% endif %}>{{ t.full_name }}</option>
+                {% endfor %}
+            </select>
+            <small class="form-hint">Удерживайте Ctrl (Cmd), чтобы выбрать несколько</small>
+            {% endif %}
+        </div>
+
+        
+        <div class="form-group">
+            <label for="attestation_type">Вид аттестации</label>
+            <select id="attestation_type" name="attestation_type">
+                {% for opt in attestation_options %}
+                <option value="{{ opt.value }}" {% if selected_attestation == opt.value %}selected{% endif %}>{{ opt.label }}</option>
+                {% endfor %}
+            </select>
+            <small class="form-hint">Для экзамена и дифзачёта преподаватель увидит прогноз оценки по ДЗ</small>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-save"></i> Создать дисциплину
+            </button>
+            <a href="/admin/subjects" class="btn-secondary">Отмена</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

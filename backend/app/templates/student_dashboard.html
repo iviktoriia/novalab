@@ -1,0 +1,912 @@
+<!-- backend/templates/student_dashboard.html -->
+{% extends "student_base.html" %}
+
+{% block title %}Личный кабинет студента{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-user-graduate"></i> Личный кабинет</h1>
+    <p class="page-user-name">{{ student_name if student_name else (request.session.get('full_name') or '') }}</p>
+    <p class="page-subtitle">Задания, работы и материалы</p>
+</div>
+
+<div class="dashboard-tabs">
+    <button class="tab active" data-tab="assignments">
+        <i class="fas fa-tasks"></i> Задания
+    </button>
+    <button class="tab" data-tab="submissions">
+        <i class="fas fa-upload"></i> Мои работы
+    </button>
+    <button class="tab" data-tab="materials">
+        <i class="fas fa-book"></i> Материалы
+    </button>
+</div>
+
+<!-- Вкладка: Задания -->
+<div class="tab-content" id="assignments">
+    <div id="assignmentsList">
+        <div class="loading-text">
+            <i class="fas fa-spinner fa-spin"></i> Загрузка заданий...
+        </div>
+    </div>
+</div>
+
+<!-- Вкладка: Мои работы -->
+<div class="tab-content" style="display: none;" id="submissions">
+    <div id="submissionsList">
+        <div class="loading-text">
+            <i class="fas fa-spinner fa-spin"></i> Загрузка работ...
+        </div>
+    </div>
+</div>
+
+<!-- Вкладка: Материалы -->
+<div class="tab-content" style="display: none;" id="materials">
+    <div id="materialsContainer">
+        <div class="loading-text">
+            <i class="fas fa-spinner fa-spin"></i> Загрузка материалов...
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для загрузки файла -->
+<div id="uploadModal" class="modal upload-modal" style="display: none;">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeModal()"><i class="fas fa-times"></i></button>
+        <h2><i class="fas fa-cloud-upload-alt"></i> Загрузка работы</h2>
+        <div id="uploadFormContainer">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label>Задание:</label>
+                    <p id="assignmentTitle" style="font-weight: 600; color: white; margin: 0.5rem 0;"></p>
+                </div>
+                
+                <!-- Информационный блок: способы сдачи -->
+                <div style="background: rgba(139, 92, 246, 0.08); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; border-left: 3px solid #8b5cf6;">
+                    <p style="color: #a78bfa; font-size: 0.85rem; margin: 0;">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>Выберите один из способов сдачи:</strong>
+                    </p>
+                    <ul style="margin: 0.3rem 0 0 1.2rem; padding: 0; color: #a1a1aa; font-size: 0.8rem;">
+                        <li style="list-style: disc; padding-left: 0.3rem;">Загрузите файлы</li>
+                        <li style="list-style: disc; padding-left: 0.3rem;">Укажите ссылку на GitHub</li>
+                        <li style="list-style: disc; padding-left: 0.3rem;">Или сделайте и то, и другое</li>
+                    </ul>
+                </div>
+                
+                <div class="form-group">
+                    <label for="fileInput"><i class="fas fa-file"></i> Файлы (можно несколько, опционально):</label>
+                    <input type="file" id="fileInput" name="files" multiple 
+                           accept=".py,.js,.ts,.java,.cpp,.c,.h,.hpp,.cs,.go,.rs,.rb,.php,.swift,.kt,.scala,.sh,.sql,.html,.css,.vue,.jsx,.tsx,.txt,.pdf,.doc,.docx,.rtf,.odt,.ppt,.pptx,.odp,.jpg,.jpeg,.png,.gif,.svg,.webp,.bmp,.ico,.zip,.rar,.7z,.tar,.gz">
+                    <small style="color: #52525b;">Максимум 20MB на файл. Можно выбрать несколько.</small>
+                </div>
+                <div class="form-group">
+                    <label for="githubLink"><i class="fab fa-github"></i> Ссылка на GitHub (опционально):</label>
+                    <input type="url" id="githubLink" name="github_link" 
+                           placeholder="https://github.com/username/repository">
+                    <small style="color: #52525b;">Укажите ссылку на репозиторий или pull request</small>
+                </div>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-upload"></i> Загрузить
+                </button>
+            </form>
+        </div>
+        <div id="uploadResult" style="display: none;"></div>
+    </div>
+</div>
+
+<!-- Модальное окно для перезагрузки задания -->
+<div id="reloadModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeReloadModal()"><i class="fas fa-times"></i></button>
+        <h2><i class="fas fa-redo"></i> Перезагрузить задание</h2>
+        <p style="color: #a1a1aa; margin-bottom: 1rem;">Вы уверены, что хотите перезагрузить это задание? Предыдущие файлы будут удалены.</p>
+        <div id="reloadFormContainer">
+            <form id="reloadForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label>Задание:</label>
+                    <p id="reloadAssignmentTitle" style="font-weight: 600; color: white; margin: 0.5rem 0;"></p>
+                </div>
+                
+                <!-- Информационный блок: способы сдачи -->
+                <div style="background: rgba(139, 92, 246, 0.08); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; border-left: 3px solid #8b5cf6;">
+                    <p style="color: #a78bfa; font-size: 0.85rem; margin: 0;">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>Выберите один из способов сдачи:</strong>
+                    </p>
+                    <ul style="margin: 0.3rem 0 0 1.2rem; padding: 0; color: #a1a1aa; font-size: 0.8rem;">
+                        <li style="list-style: disc; padding-left: 0.3rem;">Загрузите новые файлы</li>
+                        <li style="list-style: disc; padding-left: 0.3rem;">Укажите ссылку на GitHub</li>
+                        <li style="list-style: disc; padding-left: 0.3rem;">Или сделайте и то, и другое</li>
+                    </ul>
+                </div>
+                
+                <div class="form-group">
+                    <label for="reloadFileInput"><i class="fas fa-file"></i> Новые файлы (можно несколько, опционально):</label>
+                    <input type="file" id="reloadFileInput" name="files" multiple 
+                           accept=".py,.js,.ts,.java,.cpp,.c,.h,.hpp,.cs,.go,.rs,.rb,.php,.swift,.kt,.scala,.sh,.sql,.html,.css,.vue,.jsx,.tsx,.txt,.pdf,.doc,.docx,.rtf,.odt,.ppt,.pptx,.odp,.jpg,.jpeg,.png,.gif,.svg,.webp,.bmp,.ico,.zip,.rar,.7z,.tar,.gz">
+                    <small style="color: #52525b;">Максимум 20MB на файл. Можно выбрать несколько.</small>
+                </div>
+                <div class="form-group">
+                    <label for="reloadGithubLink"><i class="fab fa-github"></i> Ссылка на GitHub (опционально):</label>
+                    <input type="url" id="reloadGithubLink" name="github_link" 
+                           placeholder="https://github.com/username/repository">
+                    <small style="color: #52525b;">Укажите ссылку на репозиторий или pull request</small>
+                </div>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-upload"></i> Перезагрузить
+                </button>
+            </form>
+        </div>
+        <div id="reloadResult" style="display: none;"></div>
+    </div>
+</div>
+
+<script>
+    const studentId = {{ student_id }};
+    let currentAssignmentId = null;
+    let currentReloadSubmissionId = null;
+    let currentReloadAssignmentTitle = null;
+
+    function openUploadModal(assignmentId, title) {
+        currentAssignmentId = assignmentId;
+        const titleEl = document.getElementById('assignmentTitle');
+        if (titleEl) titleEl.textContent = title || '';
+        const formContainer = document.getElementById('uploadFormContainer');
+        const resultDiv = document.getElementById('uploadResult');
+        if (formContainer) formContainer.style.display = 'block';
+        if (resultDiv) {
+            resultDiv.style.display = 'none';
+            resultDiv.innerHTML = '';
+        }
+        const form = document.getElementById('uploadForm');
+        if (form) form.reset();
+        const modal = document.getElementById('uploadModal');
+        if (modal) modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('uploadModal');
+        if (modal) modal.style.display = 'none';
+        currentAssignmentId = null;
+    }
+
+    function openReloadModal(submissionId, title) {
+        currentReloadSubmissionId = submissionId;
+        currentReloadAssignmentTitle = title;
+        const titleEl = document.getElementById('reloadAssignmentTitle');
+        if (titleEl) titleEl.textContent = title || '';
+        const formContainer = document.getElementById('reloadFormContainer');
+        const resultDiv = document.getElementById('reloadResult');
+        if (formContainer) formContainer.style.display = 'block';
+        if (resultDiv) {
+            resultDiv.style.display = 'none';
+            resultDiv.innerHTML = '';
+        }
+        const form = document.getElementById('reloadForm');
+        if (form) form.reset();
+        const modal = document.getElementById('reloadModal');
+        if (modal) modal.style.display = 'flex';
+    }
+
+    function closeReloadModal() {
+        const modal = document.getElementById('reloadModal');
+        if (modal) modal.style.display = 'none';
+        currentReloadSubmissionId = null;
+        currentReloadAssignmentTitle = null;
+    }
+
+    function escapeHtml(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function escapeAttr(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        loadAssignments();
+        loadMaterials();
+        loadSubmissions();
+        setupTabs();
+    });
+    
+    function setupTabs() {
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                tabs.forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+                const targetId = this.dataset.tab;
+                document.getElementById(targetId).style.display = 'block';
+                
+                if (targetId === 'submissions') {
+                    loadSubmissions();
+                }
+                if (targetId === 'assignments') {
+                    loadAssignments();
+                }
+            });
+        });
+    }
+    
+    function toggleRequirements(element) {
+        const textDiv = element.nextElementSibling;
+        element.classList.toggle('active');
+        textDiv.classList.toggle('visible');
+        const textSpan = element.querySelector('.toggle-text');
+        if (textSpan) {
+            textSpan.textContent = textDiv.classList.contains('visible') ? 'Скрыть текст задания' : 'Показать текст задания';
+        }
+    }
+    
+    function toggleAccordion(id) {
+        const body = document.getElementById(id);
+        if (!body) return;
+        
+        const item = body.closest('.accordion-item');
+        if (!item) return;
+        
+        const isOpen = item.classList.contains('open');
+        
+        document.querySelectorAll('.accordion-item').forEach(function(el) {
+            el.classList.remove('open');
+        });
+        
+        if (!isOpen) {
+            item.classList.add('open');
+        }
+    }
+    
+    async function loadMaterials() {
+        const container = document.getElementById('materialsContainer');
+        if (!container) return;
+        
+        try {
+            const res = await fetch('/students/' + studentId + '/materials');
+            let materials = [];
+            if (res.ok) {
+                materials = await res.json();
+            }
+            if (!Array.isArray(materials)) materials = [];
+            
+            if (!materials.length) {
+                container.innerHTML = `
+                    <div class="dashboard-card">
+                        <div class="empty-state empty-state--compact">
+                            <i class="fas fa-inbox"></i>
+                            <p class="empty-state-title">Пока нет материалов</p>
+                            <p class="empty-state-hint">Преподаватель ещё не загрузил материалы</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            const grouped = {};
+            materials.forEach(function(m) {
+                const subject = m.subject_name || 'Без дисциплины';
+                if (!grouped[subject]) grouped[subject] = [];
+                grouped[subject].push(m);
+            });
+            
+            const typeMap = {
+                'lecture': 'Лекция',
+                'practical': 'Практика',
+                'presentation': 'Презентация',
+                'laboratory': 'Лабораторная',
+                'homework': 'ДЗ',
+                'exam': 'Экзамен',
+                'other': 'Другое'
+            };
+            
+            let html = '<div class="materials-accordion">';
+            
+            let isFirst = true;
+            for (const [subject, items] of Object.entries(grouped)) {
+                const accordionId = 'accordion-' + subject.replace(/[^a-zA-Z0-9]/g, '-');
+                const isOpen = isFirst ? 'open' : '';
+                isFirst = false;
+                
+                html += `
+                    <div class="accordion-item ${isOpen}">
+                        <div class="accordion-header" onclick="toggleAccordion('${accordionId}')">
+                            <div class="accordion-title">
+                                <i class="fas fa-book"></i>
+                                <span>${subject}</span>
+                                <span class="accordion-count">${items.length}</span>
+                            </div>
+                            <i class="fas fa-chevron-down accordion-icon"></i>
+                        </div>
+                        <div class="accordion-body" id="${accordionId}">
+                            <div class="materials-grid-student">
+                `;
+                
+                items.forEach(function(m) {
+                    const typeLabel = typeMap[m.material_type] || 'Другое';
+                    const filesHtml = (m.files || []).map(function(f) {
+                        return '<a href="/students/materials/' + m.id + '/download/0" class="material-file-link-student">' +
+                            '<i class="fas fa-file"></i> ' + (f.original_name || 'файл') +
+                            '</a>';
+                    }).join('');
+                    
+                    html += `
+                        <div class="material-card-student">
+                            <div class="material-card-header-student">
+                                <div class="material-card-title-student">
+                                    <i class="fas fa-file-alt"></i>
+                                    <span>${m.title || 'Без названия'}</span>
+                                </div>
+                                <span class="material-type-badge-student ${m.material_type || 'other'}">${typeLabel}</span>
+                            </div>
+                            ${m.description ? `<div class="material-card-desc-student">${m.description}</div>` : ''}
+                            <div class="material-card-files-student">
+                                ${filesHtml || '<span class="text-muted" style="font-size:0.7rem;">нет файлов</span>'}
+                            </div>
+                            <div class="material-card-footer-student">
+                                <span></span>
+                                <span class="material-card-date-student">${m.created_at ? new Date(m.created_at).toLocaleDateString() : ''}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
+            
+        } catch (e) {
+            container.innerHTML = `
+                <div class="dashboard-card" style="text-align: center; padding: 2rem;">
+                    <p style="color: #f87171;">
+                        <i class="fas fa-exclamation-circle" style="display: block; margin-bottom: 0.5rem;"></i>
+                        Не удалось загрузить материалы
+                    </p>
+                </div>
+            `;
+            console.error('Ошибка загрузки материалов:', e);
+        }
+    }
+    
+    async function loadAssignments() {
+        try {
+            const response = await fetch(`/students/${studentId}/assignments`);
+            let assignments = [];
+            if (response.ok) {
+                assignments = await response.json();
+            }
+            if (!Array.isArray(assignments)) assignments = [];
+            
+            const container = document.getElementById('assignmentsList');
+            
+            const filtered = assignments.filter(a => {
+                if (!a.is_submitted) return true;
+                if (a.is_submitted && (a.grade === null || a.grade === undefined)) return true;
+                if (a.is_submitted && a.status === 'revision') return true;
+                return false;
+            });
+            
+            if (filtered.length === 0) {
+                const noAssignmentsAtAll = assignments.length === 0;
+                container.innerHTML = `
+                    <div class="dashboard-card">
+                        <div class="empty-state empty-state--compact">
+                            <i class="fas fa-${noAssignmentsAtAll ? 'tasks' : 'check-circle'}"></i>
+                            <p class="empty-state-title">${noAssignmentsAtAll
+                                ? 'Заданий пока нет'
+                                : 'Все задания выполнены и проверены'}</p>
+                            ${noAssignmentsAtAll
+                                ? '<p class="empty-state-hint">Когда преподаватель создаст задание, оно появится здесь</p>'
+                                : ''}
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Группировка по дисциплинам
+            const grouped = {};
+            filtered.forEach(a => {
+                const key = a.subject_name || 'Без дисциплины';
+                if (!grouped[key]) grouped[key] = [];
+                grouped[key].push(a);
+            });
+
+            let html = '<div class="materials-accordion">';
+            let isFirst = true;
+            for (const [subject, items] of Object.entries(grouped)) {
+                const accordionId = 'asg-' + subject.replace(/[^a-zA-Z0-9а-яА-ЯёЁ]/g, '-');
+                const isOpen = isFirst ? 'open' : '';
+                isFirst = false;
+                html += `
+                    <div class="accordion-item ${isOpen}">
+                        <div class="accordion-header" onclick="toggleAccordion('${accordionId}')">
+                            <div class="accordion-title">
+                                <i class="fas fa-book"></i>
+                                <span>${subject}</span>
+                                <span class="accordion-count">${items.length}</span>
+                            </div>
+                            <i class="fas fa-chevron-down accordion-icon"></i>
+                        </div>
+                        <div class="accordion-body" id="${accordionId}">
+                            <div class="student-assignment-rows">
+                `;
+                                items.forEach(assignment => {
+                    const isSubmitted = assignment.is_submitted;
+                    const isGraded = assignment.grade !== null && assignment.grade !== undefined;
+                    const status = assignment.status || 'submitted';
+                    const titleSafe = escapeAttr(assignment.title || '');
+                    const titleHtml = escapeHtml(assignment.title || 'Без названия');
+
+                    let statusBadge;
+                    if (isSubmitted && status === 'revision') {
+                        statusBadge = '<span class="badge revision"><i class="fas fa-edit"></i> На доработку</span>';
+                    } else if (isSubmitted && !isGraded) {
+                        statusBadge = '<span class="badge submitted-not-graded"><i class="fas fa-clock"></i> На проверке</span>';
+                    } else {
+                        statusBadge = '<span class="badge pending"><i class="fas fa-clock"></i> Не сдано</span>';
+                    }
+
+                    const deadline = assignment.deadline
+                        ? `<span class="deadline"><i class="fas fa-calendar-alt"></i> ${new Date(assignment.deadline).toLocaleDateString()}</span>`
+                        : '';
+
+                    // Файлы задания от преподавателя
+                    const aFiles = assignment.assignment_files || [];
+                    let teacherFilesHtml = '';
+                    if (aFiles.length) {
+                        teacherFilesHtml = '<div class="assignment-teacher-files">' +
+                            aFiles.map(f =>
+                                `<a href="/students/assignments/${assignment.id}/download/${f.index}" class="material-file-link-student">` +
+                                `<i class="fas fa-download"></i> ${escapeHtml(f.original_name)}</a>`
+                            ).join('') +
+                            '</div>';
+                    }
+
+                    const desc = assignment.description
+                        ? `<div class="assignment-desc text-muted" style="font-size:0.8rem;margin-top:0.25rem;">${escapeHtml(assignment.description)}</div>`
+                        : '';
+                    const req = assignment.requirements
+                        ? `<details class="assignment-requirements" style="margin-top:0.35rem;font-size:0.8rem;color:#a1a1aa;">
+                             <summary style="cursor:pointer;color:#a78bfa;"><i class="fas fa-file-alt"></i> Текст задания</summary>
+                             <div style="margin-top:0.35rem;white-space:pre-wrap;">${escapeHtml(assignment.requirements)}</div>
+                           </details>`
+                        : '';
+
+                    let submittedFiles = '';
+                    if (isSubmitted && (assignment.files_list || []).length) {
+                        submittedFiles = '<div class="assignment-teacher-files" style="margin-top:0.35rem;">' +
+                            (assignment.files_list || []).map(f =>
+                                `<span class="text-muted" style="font-size:0.75rem;"><i class="fas fa-file"></i> ${escapeHtml(f.original_name || 'файл')}</span>`
+                            ).join(' ') + '</div>';
+                    }
+                    const github = (isSubmitted && assignment.github_link)
+                        ? `<a href="${escapeAttr(assignment.github_link)}" target="_blank" rel="noopener"  style="font-size:0.75rem;color:#a78bfa;"><i class="fab fa-github"></i> GitHub</a>`
+                        : '';
+
+                    let actions = '';
+                    if (!isSubmitted) {
+                        actions = `<button type="button" class="btn-student btn-student-upload btn-small"
+                            data-assignment-id="${assignment.id}" data-title="${titleSafe}"
+                            onclick="openUploadModal(this.dataset.assignmentId, this.dataset.title)">
+                            <i class="fas fa-upload"></i> Загрузить
+                        </button>`;
+                    } else if (status === 'revision' || !isGraded) {
+                        actions = `<button type="button" class="btn-action btn-reload btn-small"
+                            data-submission-id="${assignment.submission_id}" data-title="${titleSafe}"
+                            onclick="openReloadModal(this.dataset.submissionId, this.dataset.title)">
+                            <i class="fas fa-redo"></i> Обновить
+                        </button>
+                        <button type="button" class="btn-action btn-delete btn-small"
+                            data-submission-id="${assignment.submission_id}" data-title="${titleSafe}"
+                            onclick="deleteSubmission(this.dataset.submissionId, this.dataset.title)">
+                            <i class="fas fa-trash"></i>
+                        </button>`;
+                    }
+
+                    html += `
+                        <div class="student-assignment-row">
+                            <div class="student-assignment-row-top">
+                                <p class="student-assignment-title">${titleHtml}</p>
+                                ${statusBadge}
+                            </div>
+                            <div class="student-assignment-meta">
+                                ${deadline}
+                                ${isGraded ? `<span style="color:#34d399"><i class="fas fa-star"></i> ${assignment.grade}</span>` : ''}
+                                ${github}
+                            </div>
+                            ${desc}
+                            ${req}
+                            ${teacherFilesHtml}
+                            ${submittedFiles}
+                            ${assignment.feedback ? `<div class="text-muted" style="font-size:0.8rem;margin-top:0.25rem;"><i class="fas fa-comment"></i> ${escapeHtml(assignment.feedback)}</div>` : ''}
+                            <div class="student-assignment-actions">${actions}</div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            html += '</div>';
+            container.innerHTML = html;
+        } catch (e) {
+            document.getElementById('assignmentsList').innerHTML = `
+                <div class="dashboard-card">
+                    <div class="empty-state empty-state--compact">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p class="empty-state-title">Не удалось загрузить задания</p>
+                    </div>
+                </div>
+            `;
+            console.error('Ошибка загрузки заданий:', e);
+        }
+    }
+
+    async function loadSubmissions() {
+        try {
+            const response = await fetch(`/students/${studentId}/submissions`);
+            let submissions = [];
+            if (response.ok) {
+                submissions = await response.json();
+            }
+            if (!Array.isArray(submissions)) submissions = [];
+            const container = document.getElementById('submissionsList');
+            const filtered = submissions.filter(sub => sub.is_graded === true);
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="dashboard-card">
+                        <div class="empty-state empty-state--compact">
+                            <i class="fas fa-inbox"></i>
+                            <p class="empty-state-title">Нет оценённых работ</p>
+                            <p class="empty-state-hint">Оценки появятся после проверки преподавателем</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const grouped = {};
+            filtered.forEach(sub => {
+                const key = sub.subject_name || 'Без дисциплины';
+                if (!grouped[key]) grouped[key] = [];
+                grouped[key].push(sub);
+            });
+
+            const statusMap = {
+                'accepted': 'Принято',
+                'revision': 'На доработку',
+                'rejected': 'Отклонено',
+                'submitted': 'Сдано'
+            };
+
+            let html = '<div class="materials-accordion">';
+            let isFirst = true;
+            for (const [subject, items] of Object.entries(grouped)) {
+                const accordionId = 'sub-' + subject.replace(/[^a-zA-Z0-9а-яА-ЯёЁ]/g, '-');
+                const isOpen = isFirst ? 'open' : '';
+                isFirst = false;
+                html += `
+                    <div class="accordion-item ${isOpen}">
+                        <div class="accordion-header" onclick="toggleAccordion('${accordionId}')">
+                            <div class="accordion-title">
+                                <i class="fas fa-book"></i>
+                                <span>${subject}</span>
+                                <span class="accordion-count">${items.length}</span>
+                            </div>
+                            <i class="fas fa-chevron-down accordion-icon"></i>
+                        </div>
+                        <div class="accordion-body" id="${accordionId}">
+                            <div class="student-assignment-rows">
+                `;
+                                items.forEach(sub => {
+                    const statusLabel = statusMap[sub.status] || sub.status || '—';
+                    const statusCls = sub.status === 'accepted' ? 'status-active'
+                        : (sub.status === 'rejected' ? 'status-inactive' : 'status-pending');
+                    const submitted = sub.submitted_at
+                        ? new Date(sub.submitted_at).toLocaleDateString()
+                        : '';
+                    const aFiles = sub.assignment_files || [];
+                    const sFiles = sub.files_list || [];
+                    const hasDetails = !!(sub.description || sub.requirements || aFiles.length || sFiles.length || sub.github_link || sub.feedback);
+
+                    let detailsInner = '';
+                    if (sub.feedback) {
+                        detailsInner += `<div class="sg-line"><span class="sg-label">Комментарий</span><span class="sg-text">${escapeHtml(sub.feedback)}</span></div>`;
+                    }
+                    if (sub.description) {
+                        detailsInner += `<div class="sg-line"><span class="sg-label">Задание</span><span class="sg-text">${escapeHtml(sub.description)}</span></div>`;
+                    }
+                    if (sub.requirements) {
+                        detailsInner += `<div class="sg-line"><span class="sg-label">Требования</span><span class="sg-text">${escapeHtml(sub.requirements)}</span></div>`;
+                    }
+                    if (aFiles.length) {
+                        detailsInner += `<div class="sg-line"><span class="sg-label">Файлы задания</span><span class="file-chips">${aFiles.map((f, i) =>
+                            `<a class="file-chip" href="/students/assignments/${sub.assignment_id}/download/${f.index != null ? f.index : i}"><i class="fas fa-file"></i> ${escapeHtml(f.name || ('файл '+(i+1)))}</a>`
+                        ).join('')}</span></div>`;
+                    }
+                    if (sFiles.length) {
+                        detailsInner += `<div class="sg-line"><span class="sg-label">Ваши файлы</span><span class="file-chips">${sFiles.map((f, i) =>
+                            `<a class="file-chip" href="/students/submission/${sub.id}/download/${i}"><i class="fas fa-file"></i> ${escapeHtml(f.original_name || f.name || ('файл '+(i+1)))}</a>`
+                        ).join('')}</span></div>`;
+                    }
+                    if (sub.github_link) {
+                        detailsInner += `<div class="sg-line"><span class="sg-label">GitHub</span><a class="sg-link" href="${escapeAttr(sub.github_link)}" target="_blank" rel="noopener" >${escapeHtml(sub.github_link)}</a></div>`;
+                    }
+
+                    const feedbackPreview = sub.feedback
+                        ? `<span class="sg-feedback-preview" title="${escapeAttr(sub.feedback)}"><i class="fas fa-comment"></i> ${escapeHtml(sub.feedback.length > 60 ? sub.feedback.slice(0, 60) + '…' : sub.feedback)}</span>`
+                        : '';
+
+                    html += `
+                        <div class="student-assignment-row student-assignment-row--compact">
+                            <div class="student-assignment-row-top">
+                                <p class="student-assignment-title">${escapeHtml(sub.assignment_title || 'Задание')}</p>
+                                <span class="grade-badge graded"><i class="fas fa-star"></i> ${sub.grade}</span>
+                            </div>
+                            <div class="student-assignment-meta student-assignment-meta--compact">
+                                <span class="status-badge ${statusCls}">${statusLabel}</span>
+                                ${submitted ? `<span class="sg-date"><i class="fas fa-calendar-alt"></i> ${submitted}</span>` : ''}
+                                ${feedbackPreview}
+                            </div>
+                            ${hasDetails ? `<details class="sg-details"><summary>Подробнее</summary><div class="sg-details-body">${detailsInner}</div></details>` : ''}
+                        </div>
+                    `;
+                });
+                html += `
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            html += '</div>';
+            container.innerHTML = html;
+        } catch (e) {
+            document.getElementById('submissionsList').innerHTML = `
+                <div class="dashboard-card">
+                    <div class="empty-state empty-state--compact">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p class="empty-state-title">Не удалось загрузить работы</p>
+                    </div>
+                </div>
+            `;
+            console.error('Ошибка загрузки сдач:', e);
+        }
+    }
+
+
+    async function deleteSubmission(submissionId, title) {
+        if (!(await uiConfirm(`Вы уверены, что хотите удалить работу "${title}"? Это действие нельзя отменить.`))) return;
+        
+        try {
+            const response = await fetch(`/students/submission/${submissionId}/delete`, {
+                method: 'DELETE', credentials: 'same-origin'
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                uiAlert('Работа успешно удалена!');
+                loadAssignments();
+                loadSubmissions();
+            } else {
+                uiAlert('Ошибка: ' + (result.detail || 'Неизвестная ошибка'));
+            }
+        } catch (error) {
+            uiAlert('Ошибка при удалении: ' + error.message);
+        }
+    }
+    
+    window.onclick = function(event) {
+        const modal1 = document.getElementById('uploadModal');
+        const modal2 = document.getElementById('reloadModal');
+        if (event.target === modal1) {
+            closeModal();
+        }
+        if (event.target === modal2) {
+            closeReloadModal();
+        }
+    }
+    
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('fileInput');
+        const githubLink = document.getElementById('githubLink').value.trim();
+        const files = fileInput.files;
+        
+        // Проверяем, что есть хотя бы файл или ссылка
+        if (files.length === 0 && !githubLink) {
+            uiAlert('Загрузите хотя бы один файл или укажите ссылку на GitHub');
+            return;
+        }
+        
+        // Проверяем размер файлов (если есть)
+        if (files.length > 0) {
+            for (let i = 0; i < files.length; i++) {
+                if (files[i].size > 20 * 1024 * 1024) {
+                    uiAlert(`Файл "${files[i].name}" слишком большой (максимум 20MB)`);
+                    return;
+                }
+            }
+        }
+        
+        // Проверяем ссылку (если есть)
+        if (githubLink && !githubLink.startsWith('http://') && !githubLink.startsWith('https://')) {
+            uiAlert('Ссылка должна начинаться с http:// или https://');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('assignment_id', currentAssignmentId);
+        for (let i = 0; i < files.length; i++) {
+            formData.append('files', files[i]);
+        }
+        if (githubLink) {
+            formData.append('github_link', githubLink);
+        }
+        
+        try {
+            const response = await fetch(`/students/${studentId}/upload`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            document.getElementById('uploadFormContainer').style.display = 'none';
+            const resultDiv = document.getElementById('uploadResult');
+            resultDiv.style.display = 'block';
+            
+            if (response.ok) {
+                let details = [];
+                if (result.files_count > 0) {
+                    details.push(`Файлов: ${result.files_count}`);
+                }
+                if (result.has_github_link) {
+                    details.push('Ссылка на GitHub добавлена');
+                }
+                if (details.length === 0) {
+                    details.push('Нет файлов и ссылки');
+                }
+                
+                resultDiv.innerHTML = `
+                    <div class="upload-result-success">
+                        <h3><i class="fas fa-check-circle"></i> Успешно!</h3>
+                        <p>${result.message}</p>
+                        <p class="result-detail">ID работы: ${result.submission_id}</p>
+                        ${details.map(d => `<p class="result-detail">${d}</p>`).join('')}
+                        <button onclick="closeModal(); loadAssignments(); loadSubmissions();" class="btn-primary" style="margin-top: 1rem;">
+                            <i class="fas fa-check"></i> Готово
+                        </button>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="upload-result-error">
+                        <h3><i class="fas fa-exclamation-circle"></i> Ошибка</h3>
+                        <p>${result.detail || 'Произошла ошибка при загрузке'}</p>
+                        <button onclick="document.getElementById('uploadFormContainer').style.display = 'block'; this.parentElement.style.display = 'none';" class="btn-secondary" style="margin-top: 1rem;">
+                            <i class="fas fa-arrow-left"></i> Назад
+                        </button>
+                    </div>
+                `;
+            }
+            
+        } catch (error) {
+            console.error('Ошибка загрузки:', error);
+            uiAlert('Произошла ошибка при загрузке файла');
+        }
+    });
+    
+    document.getElementById('reloadForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('reloadFileInput');
+        const githubLink = document.getElementById('reloadGithubLink').value.trim();
+        const files = fileInput.files;
+        
+        // Проверяем, что есть хотя бы файл или ссылка
+        if (files.length === 0 && !githubLink) {
+            uiAlert('Загрузите хотя бы один файл или укажите ссылку на GitHub');
+            return;
+        }
+        
+        // Проверяем размер файлов (если есть)
+        if (files.length > 0) {
+            for (let i = 0; i < files.length; i++) {
+                if (files[i].size > 20 * 1024 * 1024) {
+                    uiAlert(`Файл "${files[i].name}" слишком большой (максимум 20MB)`);
+                    return;
+                }
+            }
+        }
+        
+        // Проверяем ссылку (если есть)
+        if (githubLink && !githubLink.startsWith('http://') && !githubLink.startsWith('https://')) {
+            uiAlert('Ссылка должна начинаться с http:// или https://');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('submission_id', currentReloadSubmissionId);
+        for (let i = 0; i < files.length; i++) {
+            formData.append('files', files[i]);
+        }
+        if (githubLink) {
+            formData.append('github_link', githubLink);
+        }
+        
+        try {
+            const response = await fetch(`/students/${studentId}/reload`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            document.getElementById('reloadFormContainer').style.display = 'none';
+            const resultDiv = document.getElementById('reloadResult');
+            resultDiv.style.display = 'block';
+            
+            if (response.ok) {
+                let details = [];
+                if (result.files_count > 0) {
+                    details.push(`Файлов: ${result.files_count}`);
+                }
+                if (result.has_github_link) {
+                    details.push('Ссылка на GitHub добавлена');
+                }
+                if (details.length === 0) {
+                    details.push('Нет файлов и ссылки');
+                }
+                
+                resultDiv.innerHTML = `
+                    <div class="upload-result-success">
+                        <h3><i class="fas fa-check-circle"></i> Успешно!</h3>
+                        <p>${result.message}</p>
+                        <p class="result-detail">ID работы: ${result.submission_id}</p>
+                        ${details.map(d => `<p class="result-detail">${d}</p>`).join('')}
+                        <button onclick="closeReloadModal(); loadAssignments(); loadSubmissions();" class="btn-primary" style="margin-top: 1rem;">
+                            <i class="fas fa-check"></i> Готово
+                        </button>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="upload-result-error">
+                        <h3><i class="fas fa-exclamation-circle"></i> Ошибка</h3>
+                        <p>${result.detail || 'Произошла ошибка при перезагрузке'}</p>
+                        <button onclick="document.getElementById('reloadFormContainer').style.display = 'block'; this.parentElement.style.display = 'none';" class="btn-secondary" style="margin-top: 1rem;">
+                            <i class="fas fa-arrow-left"></i> Назад
+                        </button>
+                    </div>
+                `;
+            }
+            
+        } catch (error) {
+            console.error('Ошибка перезагрузки:', error);
+            uiAlert('Произошла ошибка при перезагрузке');
+        }
+    });
+</script>
+{% endblock %}

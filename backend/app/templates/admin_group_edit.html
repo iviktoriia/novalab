@@ -1,0 +1,153 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Редактирование группы{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <a href="/admin/groups" class="back-link">
+        <i class="fas fa-arrow-left"></i> К группам
+    </a>
+    <h1><i class="fas fa-edit"></i> {{ group.name }}</h1>
+    <p class="page-subtitle">Изменение названия, регистрации и назначений</p>
+</div>
+
+{% if error %}
+<div class="dashboard-card" style="border-color: rgba(239, 68, 68, 0.3); margin-bottom: 1.5rem;">
+    <p style="color: #f87171; margin: 0;">
+        <i class="fas fa-exclamation-circle"></i> {{ error }}
+    </p>
+</div>
+{% endif %}
+
+<div class="dashboard-card">
+    <form method="POST" action="/admin/groups/{{ group.id }}/edit">
+        <div class="form-group">
+            <label for="name">Название группы</label>
+            <input type="text" id="name" name="name" required value="{{ group.name }}">
+        </div>
+
+        <div class="form-group">
+            <label>Способ регистрации студентов</label>
+            <div class="radio-group">
+                <label class="radio-label">
+                    <input type="radio" name="registration_method" value="self"
+                           {% if group.registration_method == 'self' %}checked{% endif %}
+                           id="regMethodSelf">
+                    <span>Саморегистрация (код группы)</span>
+                    <small style="display: block; color: #52525b; font-size: 0.75rem;">Студенты регистрируются сами по коду</small>
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="registration_method" value="auto"
+                           {% if group.registration_method != 'self' %}checked{% endif %}
+                           id="regMethodAuto">
+                    <span>Авторегистрация (логин и пароль)</span>
+                    <small style="display: block; color: #52525b; font-size: 0.75rem;">Студенты создаются автоматически с логинами и паролями</small>
+                </label>
+            </div>
+            {% if group.registration_code %}
+            <p class="text-muted" style="margin-top: 0.5rem; font-size: 0.85rem;">
+                Текущий код:
+                <code style="color: #a78bfa;">{{ group.registration_code }}</code>
+                <button type="button" class="btn-small btn-secondary btn-copy"
+                        onclick="copyText('{{ group.registration_code }}', this)" title="Копировать">
+                    <i class="fas fa-copy"></i>
+                </button>
+            </p>
+            {% endif %}
+        </div>
+
+        <div class="form-group" id="studentsFieldGroup">
+            <label for="students">
+                {% if students_text %}
+                Существующие студенты ({{ students_text.split('\n')|length }}):
+                <ul style="margin: 0.5rem 0; color: #a78bfa; list-style: none;">
+                    {% for name in students_text.split('\n') %}
+                    <li>{{ name }}</li>
+                    {% endfor %}
+                </ul>
+                Добавить новых студентов (по одному на строку)
+                {% else %}
+                Добавить студентов (по одному на строку)
+                {% endif %}
+            </label>
+            <textarea id="students" name="students" rows="6" 
+                      placeholder="Иван Иванов&#10;Мария Петрова&#10;Петр Сидоров"></textarea>
+            <small style="color: #52525b;">Новые студенты будут добавлены к уже существующим. Доступно только при авторегистрации.</small>
+        </div>
+
+        <div class="form-group">
+            <label for="teacher_ids">Преподаватели (доступ к группе)</label>
+            {% if teachers|length == 0 %}
+            <p class="text-muted">Нет преподавателей</p>
+            {% else %}
+            <select id="teacher_ids" name="teacher_ids" multiple size="6">
+                {% for t in teachers %}
+                <option value="{{ t.id }}" {% if t.id in selected_teachers %}selected{% endif %}>{{ t.full_name }}</option>
+                {% endfor %}
+            </select>
+            <small class="form-hint">Удерживайте Ctrl (Cmd), чтобы выбрать несколько</small>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="subject_ids">Дисциплины группы (администратор может назначить любые дисциплины)</label>
+            {% if subjects|length == 0 %}
+            <p class="text-muted">Нет дисциплин</p>
+            {% else %}
+            <select id="subject_ids" name="subject_ids" multiple size="6">
+                {% for s in subjects %}
+                <option value="{{ s.id }}" {% if s.id in selected_subjects %}selected{% endif %}>{{ s.name }}{% if s.teacher_name %} ({{ s.teacher_name }}){% endif %}</option>
+                {% endfor %}
+            </select>
+            <small class="form-hint"><i class="fas fa-info-circle"></i> Ctrl/Cmd — несколько</small>
+            {% endif %}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-save"></i> Сохранить
+            </button>
+            <a href="/admin/groups" class="btn-secondary">Отмена</a>
+            <a href="/admin/groups/{{ group.id }}" class="btn-secondary">
+                <i class="fas fa-user-graduate"></i> Студенты группы
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Функция для управления видимостью поля студентов
+    function toggleStudentsField() {
+        const autoRadio = document.getElementById('regMethodAuto');
+        const selfRadio = document.getElementById('regMethodSelf');
+        const studentsFieldGroup = document.getElementById('studentsFieldGroup');
+        const studentsTextarea = document.getElementById('students');
+        
+        if (studentsFieldGroup) {
+            if (autoRadio && autoRadio.checked) {
+                studentsFieldGroup.style.display = 'block';
+                if (studentsTextarea) {
+                    studentsTextarea.disabled = false;
+                }
+            } else if (selfRadio && selfRadio.checked) {
+                studentsFieldGroup.style.display = 'none';
+                if (studentsTextarea) {
+                    studentsTextarea.disabled = true;
+                }
+            }
+        }
+    }
+    
+    // При загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleStudentsField();
+    });
+    
+    // При изменении радиокнопок
+    document.querySelectorAll('input[name="registration_method"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            toggleStudentsField();
+        });
+    });
+</script>
+{% endblock %}

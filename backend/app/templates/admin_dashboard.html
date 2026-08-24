@@ -1,0 +1,182 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Управление преподавателями{% endblock %}
+
+{% block extra_head %}
+<script>
+function downloadTableCsv(tableId, filename) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const rows = [];
+    table.querySelectorAll('tr').forEach(tr => {
+        const cells = [...tr.querySelectorAll('th,td')].map(td => {
+            let x = (td.innerText || '').replace(/\s+/g, ' ').trim();
+            if (x.includes(',') || x.includes('"')) x = '"' + x.replace(/"/g, '""') + '"';
+            return x;
+        });
+        rows.push(cells.join(','));
+    });
+    const blob = new Blob(['\uFEFF' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename || 'export.csv';
+    a.click();
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="fas fa-user-tie"></i> Преподаватели</h1>
+        <p class="page-subtitle">Аккаунты и данные для входа</p>
+    </div>
+    <a href="/admin/teachers/create" class="btn-primary">
+        <i class="fas fa-plus"></i> Добавить преподавателей
+    </a>
+</div>
+
+{% if success %}
+<div class="dashboard-card alert-card alert-success">
+    <p class="text-success"><i class="fas fa-check-circle"></i> {{ success }}</p>
+</div>
+{% endif %}
+
+{% if error %}
+<div class="dashboard-card alert-card alert-error">
+    <p class="text-danger"><i class="fas fa-exclamation-circle"></i> {{ error }}</p>
+</div>
+{% endif %}
+
+{% if created_list %}
+<div class="dashboard-card alert-card alert-info">
+    <h3 class="section-title mb-1"><i class="fas fa-key"></i> Новые данные для входа</h3>
+    <p class="hint-box mb-1">Сохраните и передайте преподавателям. Страница входа: <a href="/teacher/login" class="text-accent">/teacher/login</a></p>
+    <div class="data-table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Имя</th>
+                    <th>Логин</th>
+                    <th>Пароль</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in created_list %}
+                <tr>
+                    <td><strong>{{ c.full_name }}</strong></td>
+                    <td>
+                        <code>{{ c.login }}</code>
+                        <button type="button" class="btn-small btn-secondary btn-copy" title="Копировать"
+                                onclick="copyText('{{ c.login }}', this)">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </td>
+                    <td>
+                        <code class="code-password">{{ c.password }}</code>
+                        <button type="button" class="btn-small btn-secondary btn-copy" title="Копировать"
+                                onclick="copyText('{{ c.password }}', this)">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<div class="dashboard-card">
+    <div class="toolbar-row">
+        <h3 class="section-title"><i class="fas fa-list"></i> Список преподавателей
+            <span class="count-muted">({{ teachers|length }})</span>
+        </h3>
+        {% if teachers|length > 0 %}
+        <div class="toolbar-actions">
+            <button type="button" class="btn-secondary btn-small" onclick="downloadTableCsv('admin-teachers-table', 'teachers.csv')">
+                <i class="fas fa-download"></i> Скачать CSV
+            </button>
+            <button type="button" class="btn-secondary btn-small" onclick="window.print()">
+                <i class="fas fa-print"></i> Печать
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if teachers|length == 0 %}
+    <div class="empty-state empty-state--compact">
+        <i class="fas fa-inbox"></i>
+        <p class="empty-state-title">Пока нет преподавателей</p>
+        <p class="empty-state-hint">Добавьте преподавателей кнопкой выше</p>
+    </div>
+    {% else %}
+    <div class="data-table-wrapper">
+        <table class="data-table" id="admin-teachers-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Имя</th>
+                    <th>Логин</th>
+                    <th>Пароль</th>
+                    <th>Статус</th>
+                    <th>Создан</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in teachers %}
+                <tr>
+                    <td>{{ t.id }}</td>
+                    <td><strong>{{ t.full_name }}</strong></td>
+                    <td>
+                        <code>{{ t.login }}</code>
+                        <button type="button" class="btn-small btn-secondary btn-copy" title="Копировать"
+                                onclick="copyText('{{ t.login }}', this)">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </td>
+                    <td>
+                        {% if t.password %}
+                        <code class="code-password">{{ t.password }}</code>
+                        <button type="button" class="btn-small btn-secondary btn-copy" title="Копировать"
+                                onclick="copyText('{{ t.password }}', this)">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if t.is_active %}
+                        <span class="status-badge status-active"><i class="fas fa-check-circle"></i> Активен</span>
+                        {% else %}
+                        <span class="status-badge status-inactive"><i class="fas fa-ban"></i> Отключён</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted">
+                        {% if t.created_at %}{{ t.created_at.strftime('%d.%m.%Y %H:%M') }}{% else %}—{% endif %}
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <form method="POST" action="/admin/teachers/{{ t.id }}/toggle" style="display: inline;">
+                                <button type="submit" class="btn-small btn-secondary" title="{% if t.is_active %}Отключить{% else %}Включить{% endif %}">
+                                    <i class="fas fa-{% if t.is_active %}ban{% else %}check{% endif %}"></i>
+                                </button>
+                            </form>
+                            <form method="POST" action="/admin/teachers/{{ t.id }}/delete" style="display: inline;"
+                                  onsubmit="return uiConfirmSubmit(event, 'Удалить «{{ t.full_name }}»?');">
+                                <button type="submit" class="btn-small btn-danger" title="Удалить">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

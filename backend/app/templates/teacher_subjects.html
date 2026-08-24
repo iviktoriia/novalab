@@ -1,0 +1,88 @@
+{% extends "teacher_base.html" %}
+
+{% block title %}Управление дисциплинами{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-book"></i> Управление дисциплинами</h1>
+    <a href="/teacher/subjects/create" class="btn-primary">
+        <i class="fas fa-plus"></i> Создать дисциплину
+    </a>
+</div>
+
+{% if subjects|length == 0 %}
+<div class="dashboard-card">
+    <div class="empty-state">
+        <i class="fas fa-book"></i>
+        <p class="empty-state-title">У вас пока нет дисциплин</p>
+        <p class="empty-state-hint">Создайте дисциплину кнопкой выше</p>
+    </div>
+</div>
+{% else %}
+<div class="subjects-grid">
+    {% for subject in subjects %}
+    <div class="dashboard-card subject-card">
+        <div class="subject-header">
+            <div>
+                <h3>{{ subject.name }}</h3>
+                <div class="subject-teacher"><i class="fas fa-user-tie"></i> {{ subject.teacher_name or 'Не указан' }}</div>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <span class="subject-badge"><i class="fas fa-file-alt"></i> {{ subject.materials|length }} материалов</span>
+                <span class="subject-badge"><i class="fas fa-tasks"></i> {{ subject.assignments|length }} заданий</span>
+                {% if subject.attestation_label %}
+                <span class="subject-badge"><i class="fas fa-graduation-cap"></i> {{ subject.attestation_label }}</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="subject-description">
+            {{ subject.description or 'Нет описания' }}
+        </div>
+        
+        <div class="subject-actions">
+            <a href="/teacher/subjects/{{ subject.id }}/materials" class="btn-primary btn-small">
+                <i class="fas fa-paperclip"></i> Материалы
+            </a>
+            <a href="/teacher/subjects/{{ subject.id }}/attestation" class="btn-secondary btn-small">
+                <i class="fas fa-graduation-cap"></i> Аттестация
+            </a>
+            <button class="btn-secondary btn-small" onclick="window.location.href='/teacher/subjects/{{ subject.id }}/edit'">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn-danger btn-small" onclick="deleteSubject({{ subject.id }})">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<script>
+    async function deleteSubject(subjectId) {
+        if (!(await uiConfirm('Удалить дисциплину? Это действие нельзя отменить.'))) return;
+        
+        try {
+            const response = await fetch(`/teacher/subjects/${subjectId}/delete`, {
+                method: 'DELETE', credentials: 'same-origin'
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                uiAlert('Дисциплина удалена');
+                window.location.reload();
+            } else {
+                uiAlert('Ошибка: ' + (result.detail || 'Неизвестная ошибка'));
+            }
+        } catch (error) {
+            uiAlert('Ошибка: ' + error.message);
+        }
+    }
+    
+    function editSubject(subjectId) {
+        uiAlert('Редактирование дисциплины будет доступно позже');
+    }
+</script>
+{% endblock %}

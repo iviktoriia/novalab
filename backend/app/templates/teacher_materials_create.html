@@ -1,0 +1,94 @@
+{% extends "teacher_base.html" %}
+
+{% block title %}Добавление материалов{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <a href="/teacher/subjects/{{ subject.id }}/materials" class="back-link">
+        <i class="fas fa-arrow-left"></i> Назад к материалам
+    </a>
+    <h1><i class="fas fa-plus"></i> Добавление материалов</h1>
+    <p class="page-subtitle">Дисциплина: <strong>{{ subject.name }}</strong></p>
+</div>
+
+<div class="dashboard-card">
+    <form method="POST" action="/teacher/subjects/{{ subject.id }}/materials/create" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="materialTitle">Название материала <span style="color: #f87171;">*</span></label>
+            <input type="text" id="materialTitle" name="title" 
+                   placeholder="Например: Лекция 1. Введение в Python" 
+                   required>
+        </div>
+        
+        <div class="form-group">
+            <label for="materialType">Тип материала</label>
+            <select id="materialType" name="material_type">
+                <option value="lecture">Лекция</option>
+                <option value="practical">Практика</option>
+                <option value="presentation">Презентация</option>
+                <option value="laboratory">Лабораторная</option>
+                <option value="homework">Домашнее задание</option>
+                <option value="exam">Экзамен</option>
+                <option value="other" selected>Другое</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="materialDescription">Описание</label>
+            <textarea id="materialDescription" name="description" rows="3" 
+                      placeholder="Краткое описание материала"></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="materialFiles">Файлы <span style="color: #f87171;">*</span></label>
+            <input type="file" id="materialFiles" name="files" multiple required>
+            <small style="color: #52525b; display: block; margin-top: 0.25rem;">
+                Поддерживаемые форматы: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, ODT, ODP, 
+                изображения, архивы, и все основные языки программирования
+            </small>
+            <small style="color: #52525b; display: block; margin-top: 0.25rem;">
+                <strong>Языки программирования:</strong> Python, JavaScript, TypeScript, Java, C, C++, C#, Go, Rust, 
+                Ruby, PHP, Swift, Kotlin, Scala, Shell, SQL, HTML, CSS и многие другие
+            </small>
+            <div id="fileList" style="margin-top: 0.5rem;"></div>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-upload"></i> Загрузить
+            </button>
+            <a href="/teacher/subjects/{{ subject.id }}/materials" class="btn-secondary">
+                <i class="fas fa-times"></i> Отмена
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Отображение выбранных файлов
+    document.getElementById('materialFiles').addEventListener('change', function(e) {
+        const fileList = document.getElementById('fileList');
+        fileList.innerHTML = '';
+        
+        if (this.files.length === 0) {
+            fileList.innerHTML = '<span style="color: #52525b;">Файлы не выбраны</span>';
+            return;
+        }
+        
+        let html = '<div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">';
+        for (let i = 0; i < this.files.length; i++) {
+            const file = this.files[i];
+            const size = (file.size / 1024).toFixed(1);
+            html += `
+                <span style="background: rgba(139, 92, 246, 0.1); padding: 0.2rem 0.75rem; border-radius: 6px; font-size: 0.85rem; color: #a78bfa; display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <i class="fas fa-file"></i>
+                    ${file.name}
+                    <span style="color: #52525b; font-size: 0.7rem;">(${size} KB)</span>
+                </span>
+            `;
+        }
+        html += '</div>';
+        fileList.innerHTML = html;
+    });
+</script>
+{% endblock %}

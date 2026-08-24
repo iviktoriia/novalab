@@ -1,0 +1,99 @@
+{% extends "teacher_base.html" %}
+
+{% block title %}Управление группами{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-users"></i> Управление группами</h1>
+    <a href="/teacher/groups/create" class="btn-primary">
+        <i class="fas fa-plus"></i> Создать группу
+    </a>
+</div>
+
+{% if groups|length == 0 %}
+<div class="dashboard-card">
+    <div class="empty-state">
+        <i class="fas fa-users"></i>
+        <p class="empty-state-title">У вас пока нет групп</p>
+        <p class="empty-state-hint">Создайте группу кнопкой выше</p>
+    </div>
+</div>
+{% else %}
+<div class="groups-grid">
+    {% for group in groups %}
+    <div class="dashboard-card group-card">
+        <div class="group-header">
+            <div>
+                <h3>
+                    {{ group.name }}
+                    {% if group.is_shared %}
+                    <span style="font-size: 0.6rem; color: #a78bfa; background: rgba(139, 92, 246, 0.15); padding: 0.1rem 0.5rem; border-radius: 4px; margin-left: 0.5rem;">
+                        <i class="fas fa-share-alt"></i> Общая
+                    </span>
+                    {% endif %}
+                </h3>
+                <div class="group-meta">
+                    <span><i class="fas fa-user"></i> {{ group.students_count }} студентов</span>
+                    <span><i class="fas fa-book"></i> {{ group.subjects_count }} дисциплин</span>
+                    <span><i class="fas fa-{{ 'check-circle' if group.registration_method == 'auto' else 'users' }}"></i> {{ 'Авторегистрация' if group.registration_method == 'auto' else 'Саморегистрация' }}</span>
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <a href="/teacher/groups/{{ group.id }}/students" class="btn-primary btn-small">
+                    <i class="fas fa-eye"></i> Данные
+                </a>
+                {% if group.can_manage or group.is_shared %}
+                <a href="/teacher/groups/{{ group.id }}/edit" class="btn-secondary btn-small">
+                    <i class="fas fa-edit"></i>
+                </a>
+                {% endif %}
+                {% if group.can_manage %}
+                <button class="btn-danger btn-small" onclick="deleteGroup({{ group.id }})">
+                    <i class="fas fa-trash"></i>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="group-subjects">
+            <div class="group-subjects-label"><i class="fas fa-book"></i> Дисциплины:</div>
+            <div class="subjects-tags">
+                {% if group.group_subjects %}
+                    {% for gs in group.group_subjects %}
+                        {% if gs.subject %}
+                        <span class="subject-tag">{{ gs.subject.name }}</span>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <span class="empty-subjects">Нет дисциплин</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<script>
+    async function deleteGroup(groupId) {
+        if (!(await uiConfirm('Удалить группу и всех студентов в ней? Это действие нельзя отменить.'))) return;
+        
+        try {
+            const response = await fetch(`/teacher/groups/${groupId}/delete`, {
+                method: 'DELETE', credentials: 'same-origin'
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                uiAlert('Группа удалена');
+                window.location.reload();
+            } else {
+                uiAlert('Ошибка: ' + (result.detail || 'Неизвестная ошибка'));
+            }
+        } catch (error) {
+            uiAlert('Ошибка: ' + error.message);
+        }
+    }
+</script>
+{% endblock %}
