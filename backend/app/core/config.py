@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     admin_login: str = "admin"
     admin_password: str = "admin123"
 
-    s3_enabled: bool = False
+    s3_enabled: bool = True
     s3_endpoint_url: str = "https://s3.twcstorage.ru"
     s3_region: str = "ru-1"
     s3_access_key: str = ""
