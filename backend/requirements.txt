@@ -16,3 +16,5 @@ email-validator==2.1.1
 typing-extensions==4.12.2
 psycopg2-binary==2.9.10
 boto3==1.35.99
+itsdangerous>=2.2.0
+pytz>=2024.1
